@@ -1,6 +1,6 @@
 {
     "name": "readwise-smithery-mcp",
-    "version": "1.0.0",
+    "version": "0.1.8",
     "description": "Readwise MCP Server for Smithery",
     "main": "index.js",
     "scripts": {
