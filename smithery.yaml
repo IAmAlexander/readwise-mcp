@@ -1,0 +1,8 @@
+version: 1
+build:
+  type: docker
+  dockerfile: Dockerfile
+  env:
+    - NODE_ENV=production
+deploy:
+  port: 3000
