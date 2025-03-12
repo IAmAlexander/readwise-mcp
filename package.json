@@ -21,7 +21,7 @@
       "axios": "^1.6.2",
       "cors": "^2.8.5",
       "express": "^4.18.2",
-      "smithery": "^0.1.10"
+      "smithery": "0.1.8"
     },
     "devDependencies": {
       "nodemon": "^3.0.1"
