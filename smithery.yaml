@@ -11,10 +11,4 @@ runtime:
 
 # MCP configuration  
 mcp:
-  manifest:
-    name: "Readwise"
-    name_for_human: "Readwise"
-    description_for_human: "Access your Readwise library, including articles, books, highlights, and documents."
-    description_for_model: "This tool allows access to the user's Readwise library, including saved articles, books, highlights, and documents. Use this to retrieve information the user has saved in Readwise for reference or analysis."
-    logo_url: "https://readwise.io/static/img/readwise.png"
-    contact_email: "iamalexander@users.noreply.github.com/g"
+  manifest: mcp-manifest.json
