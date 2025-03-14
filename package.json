@@ -8,7 +8,14 @@
         "dev": "ts-node src/index.ts",
         "simple": "ts-node src/simple-server.ts",
         "lint": "eslint src --ext .ts",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage",
+        "test:tags": "jest tags",
+        "test:search": "jest advanced-search",
+        "test:bulk": "jest bulk-operations",
+        "test:progress": "jest reading-progress",
+        "test:delete": "jest delete-confirmation"
     },
     "keywords": [
         "mcp",
@@ -28,10 +35,15 @@
     "devDependencies": {
         "@types/cors": "^2.8.17",
         "@types/express": "^4.17.21",
+        "@types/jest": "^29.5.12",
         "@types/node": "^20.10.0",
+        "@types/supertest": "^6.0.2",
         "@typescript-eslint/eslint-plugin": "^6.12.0",
         "@typescript-eslint/parser": "^6.12.0",
         "eslint": "^8.54.0",
+        "jest": "^29.7.0",
+        "supertest": "^6.3.4",
+        "ts-jest": "^29.1.2",
         "ts-node": "^10.9.1",
         "typescript": "^5.3.2"
     },
