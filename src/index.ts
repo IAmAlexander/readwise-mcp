@@ -1,11 +1,17 @@
-// Use direct import to the ESM entry point
-import { MCP, createExpressAdapter } from '@modelcontextprotocol/sdk';
-import type { AuthorizationData } from '@modelcontextprotocol/sdk';
+// Use CommonJS require instead of ESM import
+const sdk = require('@modelcontextprotocol/sdk');
+const { MCP, createExpressAdapter } = sdk;
 import express from 'express';
 import axios, { AxiosInstance } from 'axios';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+
+// Define AuthorizationData type
+interface AuthorizationData {
+  access_token?: string;
+  [key: string]: any;
+}
 
 // Define types for client and request
 interface Client {
