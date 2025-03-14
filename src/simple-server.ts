@@ -814,11 +814,23 @@ const openApiSpec: OpenAPISpec = {
             schema: {
               type: "string"
             }
+          },
+          {
+            name: "confirm",
+            in: "query",
+            required: true,
+            description: "Confirmation string. Must be 'yes' to confirm deletion.",
+            schema: {
+              type: "string"
+            }
           }
         ],
         responses: {
           "204": {
             description: "Document deleted successfully"
+          },
+          "400": {
+            description: "Missing confirmation"
           },
           "401": {
             description: "Unauthorized - Invalid token"
@@ -1413,9 +1425,13 @@ const openApiSpec: OpenAPISpec = {
                       },
                       required: ["url"]
                     }
+                  },
+                  confirmation: {
+                    type: "string",
+                    description: "Confirmation string. Must be 'I confirm saving these items' to proceed."
                   }
                 },
-                required: ["items"]
+                required: ["items", "confirmation"]
               }
             }
           }
@@ -1430,6 +1446,9 @@ const openApiSpec: OpenAPISpec = {
                 }
               }
             }
+          },
+          "400": {
+            description: "Missing or invalid confirmation"
           },
           "401": {
             description: "Unauthorized - Invalid token"
@@ -1489,9 +1508,13 @@ const openApiSpec: OpenAPISpec = {
                       },
                       required: ["document_id"]
                     }
+                  },
+                  confirmation: {
+                    type: "string",
+                    description: "Confirmation string. Must be 'I confirm these updates' to proceed."
                   }
                 },
-                required: ["updates"]
+                required: ["updates", "confirmation"]
               }
             }
           }
@@ -1532,9 +1555,13 @@ const openApiSpec: OpenAPISpec = {
                     type: "array",
                     items: { type: "string" },
                     description: "IDs of the documents to delete"
+                  },
+                  confirmation: {
+                    type: "string",
+                    description: "Confirmation string. Must be 'I confirm deletion of these documents' to proceed."
                   }
                 },
-                required: ["document_ids"]
+                required: ["document_ids", "confirmation"]
               }
             }
           }
@@ -1549,6 +1576,9 @@ const openApiSpec: OpenAPISpec = {
                 }
               }
             }
+          },
+          "400": {
+            description: "Missing or invalid confirmation"
           },
           "401": {
             description: "Unauthorized - Invalid token"
@@ -1585,9 +1615,13 @@ const openApiSpec: OpenAPISpec = {
                     type: "boolean",
                     description: "Whether to replace existing tags (true) or append to them (false)",
                     default: false
+                  },
+                  confirmation: {
+                    type: "string",
+                    description: "Confirmation string. Must be 'I confirm these tag changes' to proceed."
                   }
                 },
-                required: ["document_ids", "tags"]
+                required: ["document_ids", "tags", "confirmation"]
               }
             }
           }
@@ -1602,6 +1636,9 @@ const openApiSpec: OpenAPISpec = {
                 }
               }
             }
+          },
+          "400": {
+            description: "Missing or invalid confirmation"
           },
           "401": {
             description: "Unauthorized - Invalid token"
@@ -2016,9 +2053,18 @@ app.delete('/delete/:document_id', async (req: Request, res: Response) => {
     }
     
     const documentId = req.params.document_id;
+    const confirm = req.query.confirm as string;
     
     if (!documentId) {
       return res.status(400).json({ error: 'Document ID is required' });
+    }
+    
+    // Check for confirmation
+    if (!confirm || confirm !== 'yes') {
+      return res.status(400).json({ 
+        error: 'Confirmation required. Add query parameter confirm=yes to confirm deletion.',
+        message: 'This is a safety measure to prevent accidental deletions.'
+      });
     }
     
     // Send the delete request to Readwise API
@@ -2575,10 +2621,19 @@ app.post('/bulk/save', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'No token provided' });
     }
     
-    const { items } = req.body;
+    const { items, confirmation } = req.body;
     
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Items array is required and must not be empty' });
+    }
+    
+    // Check for confirmation
+    const requiredConfirmation = 'I confirm saving these items';
+    if (!confirmation || confirmation !== requiredConfirmation) {
+      return res.status(400).json({ 
+        error: `Confirmation required. Add "confirmation": "${requiredConfirmation}" to your request body.`,
+        message: 'This is a safety measure to prevent accidental bulk saves.'
+      });
     }
     
     // Process each item in parallel
@@ -2661,10 +2716,19 @@ app.post('/bulk/update', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'No token provided' });
     }
     
-    const { updates } = req.body;
+    const { updates, confirmation } = req.body;
     
     if (!Array.isArray(updates) || updates.length === 0) {
       return res.status(400).json({ error: 'Updates array is required and must not be empty' });
+    }
+    
+    // Check for confirmation
+    const requiredConfirmation = 'I confirm these updates';
+    if (!confirmation || confirmation !== requiredConfirmation) {
+      return res.status(400).json({ 
+        error: `Confirmation required. Add "confirmation": "${requiredConfirmation}" to your request body.`,
+        message: 'This is a safety measure to prevent accidental bulk updates.'
+      });
     }
     
     // Process each update in parallel
@@ -2750,10 +2814,19 @@ app.post('/bulk/delete', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'No token provided' });
     }
     
-    const { document_ids } = req.body;
+    const { document_ids, confirmation } = req.body;
     
     if (!Array.isArray(document_ids) || document_ids.length === 0) {
       return res.status(400).json({ error: 'Document IDs array is required and must not be empty' });
+    }
+    
+    // Check for confirmation
+    const requiredConfirmation = 'I confirm deletion of these documents';
+    if (!confirmation || confirmation !== requiredConfirmation) {
+      return res.status(400).json({ 
+        error: `Confirmation required. Add "confirmation": "${requiredConfirmation}" to your request body.`,
+        message: 'This is a safety measure to prevent accidental bulk deletions.'
+      });
     }
     
     // Process each deletion in parallel
@@ -2810,7 +2883,7 @@ app.post('/bulk/tag', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'No token provided' });
     }
     
-    const { document_ids, tags, replace_existing = false } = req.body;
+    const { document_ids, tags, replace_existing = false, confirmation } = req.body;
     
     if (!Array.isArray(document_ids) || document_ids.length === 0) {
       return res.status(400).json({ error: 'Document IDs array is required and must not be empty' });
@@ -2818,6 +2891,15 @@ app.post('/bulk/tag', async (req: Request, res: Response) => {
     
     if (!Array.isArray(tags) || tags.length === 0) {
       return res.status(400).json({ error: 'Tags array is required and must not be empty' });
+    }
+    
+    // Check for confirmation
+    const requiredConfirmation = 'I confirm these tag changes';
+    if (!confirmation || confirmation !== requiredConfirmation) {
+      return res.status(400).json({ 
+        error: `Confirmation required. Add "confirmation": "${requiredConfirmation}" to your request body.`,
+        message: 'This is a safety measure to prevent accidental bulk tag changes.'
+      });
     }
     
     // Process each document in parallel
