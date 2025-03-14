@@ -2,6 +2,8 @@
 
 This is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server for [Readwise](https://readwise.io), allowing AI assistants to access your saved articles, books, highlights, and documents.
 
+[![smithery badge](https://smithery.ai/badge/@IAmAlexander/readwise-mcp)](https://smithery.ai/server/@IAmAlexander/readwise-mcp)
+
 ## Features
 
 - **Books & Articles**: Browse your collection of saved books and articles
