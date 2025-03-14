@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Readwise MCP Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .panel {
+            flex: 1;
+            min-width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+        .loading {
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <h1>Readwise MCP Demo</h1>
+    <p>This demo shows how to use the Readwise MCP server to interact with the Readwise API.</p>
+    
+    <div class="panel">
+        <h2>Authentication</h2>
+        <input type="text" id="authToken" placeholder="Enter your Readwise API token">
+        <button id="saveToken">Save Token</button>
+        <p id="tokenStatus"></p>
+    </div>
+    
+    <div class="container">
+        <div class="panel">
+            <h2>Server Status</h2>
+            <button id="checkStatus">Check Status</button>
+            <div id="statusResult"></div>
+        </div>
+        
+        <div class="panel">
+            <h2>Tags</h2>
+            <button id="getTags">Get All Tags</button>
+            <div id="tagsResult"></div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="panel">
+            <h2>Advanced Search</h2>
+            <input type="text" id="searchQuery" placeholder="Search query">
+            <input type="text" id="searchTags" placeholder="Tags (comma separated)">
+            <select id="searchCategory">
+                <option value="">All Categories</option>
+                <option value="books">Books</option>
+                <option value="articles">Articles</option>
+                <option value="tweets">Tweets</option>
+                <option value="podcasts">Podcasts</option>
+            </select>
+            <button id="searchButton">Search</button>
+            <div id="searchResult"></div>
+        </div>
+        
+        <div class="panel">
+            <h2>Reading Progress</h2>
+            <select id="readingStatus">
+                <option value="reading">Currently Reading</option>
+                <option value="completed">Completed</option>
+                <option value="to_read">To Read</option>
+            </select>
+            <button id="getReadingList">Get Reading List</button>
+            <div id="readingResult"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Store the auth token
+        let authToken = localStorage.getItem('readwiseToken') || '';
+        
+        // Update the token input field
+        document.getElementById('authToken').value = authToken;
+        
+        // Update token status
+        function updateTokenStatus() {
+            const statusElement = document.getElementById('tokenStatus');
+            if (authToken) {
+                statusElement.textContent = 'Token saved!';
+                statusElement.className = 'success';
+            } else {
+                statusElement.textContent = 'No token saved';
+                statusElement.className = 'error';
+            }
+        }
+        
+        // Initialize token status
+        updateTokenStatus();
+        
+        // Save token button
+        document.getElementById('saveToken').addEventListener('click', () => {
+            authToken = document.getElementById('authToken').value.trim();
+            localStorage.setItem('readwiseToken', authToken);
+            updateTokenStatus();
+        });
+        
+        // Function to make API requests
+        async function makeRequest(url, method = 'GET', body = null) {
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+                
+                // Add auth token if available
+                if (authToken && url !== '/status') {
+                    options.headers['Authorization'] = `Token ${authToken}`;
+                }
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+                
+                const response = await fetch(`http://localhost:3000${url}`, options);
+                const data = await response.json();
+                return { success: true, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+        
+        // Check status button
+        document.getElementById('checkStatus').addEventListener('click', async () => {
+            const resultElement = document.getElementById('statusResult');
+            resultElement.innerHTML = '<p class="loading">Loading...</p>';
+            
+            const result = await makeRequest('/status');
+            
+            if (result.success) {
+                resultElement.innerHTML = `
+                    <p class="success">Success! Status: ${result.status}</p>
+                    <pre>${JSON.stringify(result.data, null, 2)}</pre>
+                `;
+            } else {
+                resultElement.innerHTML = `
+                    <p class="error">Error: ${result.error}</p>
+                `;
+            }
+        });
+        
+        // Get tags button
+        document.getElementById('getTags').addEventListener('click', async () => {
+            const resultElement = document.getElementById('tagsResult');
+            
+            if (!authToken) {
+                resultElement.innerHTML = '<p class="error">Please enter your Readwise API token first</p>';
+                return;
+            }
+            
+            resultElement.innerHTML = '<p class="loading">Loading...</p>';
+            
+            const result = await makeRequest('/tags');
+            
+            if (result.success) {
+                resultElement.innerHTML = `
+                    <p class="success">Success! Status: ${result.status}</p>
+                    <pre>${JSON.stringify(result.data, null, 2)}</pre>
+                `;
+            } else {
+                resultElement.innerHTML = `
+                    <p class="error">Error: ${result.error}</p>
+                `;
+            }
+        });
+        
+        // Search button
+        document.getElementById('searchButton').addEventListener('click', async () => {
+            const resultElement = document.getElementById('searchResult');
+            
+            if (!authToken) {
+                resultElement.innerHTML = '<p class="error">Please enter your Readwise API token first</p>';
+                return;
+            }
+            
+            const query = document.getElementById('searchQuery').value.trim();
+            const tags = document.getElementById('searchTags').value.trim();
+            const category = document.getElementById('searchCategory').value;
+            
+            if (!query) {
+                resultElement.innerHTML = '<p class="error">Please enter a search query</p>';
+                return;
+            }
+            
+            resultElement.innerHTML = '<p class="loading">Loading...</p>';
+            
+            let url = `/search/advanced?query=${encodeURIComponent(query)}`;
+            
+            if (tags) {
+                url += `&tags=${encodeURIComponent(tags)}`;
+            }
+            
+            if (category) {
+                url += `&category=${encodeURIComponent(category)}`;
+            }
+            
+            const result = await makeRequest(url);
+            
+            if (result.success) {
+                resultElement.innerHTML = `
+                    <p class="success">Success! Status: ${result.status}</p>
+                    <p>Found ${result.data.count} results</p>
+                    <pre>${JSON.stringify(result.data.results.slice(0, 3), null, 2)}</pre>
+                    ${result.data.count > 3 ? '<p>Showing first 3 results only...</p>' : ''}
+                `;
+            } else {
+                resultElement.innerHTML = `
+                    <p class="error">Error: ${result.error}</p>
+                `;
+            }
+        });
+        
+        // Get reading list button
+        document.getElementById('getReadingList').addEventListener('click', async () => {
+            const resultElement = document.getElementById('readingResult');
+            
+            if (!authToken) {
+                resultElement.innerHTML = '<p class="error">Please enter your Readwise API token first</p>';
+                return;
+            }
+            
+            const status = document.getElementById('readingStatus').value;
+            
+            resultElement.innerHTML = '<p class="loading">Loading...</p>';
+            
+            const result = await makeRequest(`/reading-list?status=${encodeURIComponent(status)}`);
+            
+            if (result.success) {
+                resultElement.innerHTML = `
+                    <p class="success">Success! Status: ${result.status}</p>
+                    <p>Found ${result.data.count} results</p>
+                    <pre>${JSON.stringify(result.data.results.slice(0, 3), null, 2)}</pre>
+                    ${result.data.count > 3 ? '<p>Showing first 3 results only...</p>' : ''}
+                `;
+            } else {
+                resultElement.innerHTML = `
+                    <p class="error">Error: ${result.error}</p>
+                `;
+            }
+        });
+    </script>
+</body>
+</html> 

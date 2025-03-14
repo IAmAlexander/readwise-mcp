@@ -1,0 +1,21 @@
+{
+  "schema_version": "v1",
+  "name": "readwise-mcp",
+  "name_for_human": "Readwise MCP",
+  "description_for_human": "Access and manage your Readwise library, including books, articles, highlights, and tags.",
+  "description_for_model": "This plugin allows you to access and manage a user's Readwise library. You can retrieve books, articles, highlights, and tags. You can also perform advanced searches, manage reading progress, and perform bulk operations.",
+  "auth": {
+    "type": "oauth",
+    "client_url": "https://readwise.io/api_access",
+    "scope": "read write",
+    "authorization_url": "https://readwise.io/api/v2/auth/",
+    "authorization_content_type": "application/json"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "http://localhost:3000/openapi.json"
+  },
+  "logo_url": "https://readwise.io/static/img/readwise-logo.png",
+  "contact_email": "support@readwise.io",
+  "legal_info_url": "https://readwise.io/terms"
+} 

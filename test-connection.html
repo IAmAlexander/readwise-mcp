@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Readwise MCP Server Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>Readwise MCP Server Test</h1>
+    
+    <div>
+        <h2>Test Status Endpoint</h2>
+        <button id="testStatus">Test Status Endpoint</button>
+        <div id="statusResult"></div>
+    </div>
+    
+    <div>
+        <h2>Test Tags Endpoint</h2>
+        <button id="testTags">Test Tags Endpoint</button>
+        <div id="tagsResult"></div>
+    </div>
+    
+    <div>
+        <h2>Test Advanced Search Endpoint</h2>
+        <button id="testSearch">Test Advanced Search Endpoint</button>
+        <div id="searchResult"></div>
+    </div>
+    
+    <script>
+        // Function to make API requests
+        async function makeRequest(url, method = 'GET', body = null) {
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+                
+                const response = await fetch(url, options);
+                const data = await response.json();
+                return { success: true, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+        
+        // Test status endpoint
+        document.getElementById('testStatus').addEventListener('click', async () => {
+            const resultElement = document.getElementById('statusResult');
+            resultElement.innerHTML = 'Testing...';
+            
+            const result = await makeRequest('http://localhost:3000/status');
+            
+            if (result.success) {
+                resultElement.innerHTML = `
+                    <p class="success">Success! Status: ${result.status}</p>
+                    <pre>${JSON.stringify(result.data, null, 2)}</pre>
+                `;
+            } else {
+                resultElement.innerHTML = `
+                    <p class="error">Error: ${result.error}</p>
+                `;
+            }
+        });
+        
+        // Test tags endpoint
+        document.getElementById('testTags').addEventListener('click', async () => {
+            const resultElement = document.getElementById('tagsResult');
+            resultElement.innerHTML = 'Testing...';
+            
+            const result = await makeRequest('http://localhost:3000/tags');
+            
+            if (result.success) {
+                resultElement.innerHTML = `
+                    <p class="success">Success! Status: ${result.status}</p>
+                    <pre>${JSON.stringify(result.data, null, 2)}</pre>
+                `;
+            } else {
+                resultElement.innerHTML = `
+                    <p class="error">Error: ${result.error}</p>
+                `;
+            }
+        });
+        
+        // Test advanced search endpoint
+        document.getElementById('testSearch').addEventListener('click', async () => {
+            const resultElement = document.getElementById('searchResult');
+            resultElement.innerHTML = 'Testing...';
+            
+            const result = await makeRequest('http://localhost:3000/search/advanced?query=test');
+            
+            if (result.success) {
+                resultElement.innerHTML = `
+                    <p class="success">Success! Status: ${result.status}</p>
+                    <pre>${JSON.stringify(result.data, null, 2)}</pre>
+                `;
+            } else {
+                resultElement.innerHTML = `
+                    <p class="error">Error: ${result.error}</p>
+                `;
+            }
+        });
+    </script>
+</body>
+</html> 

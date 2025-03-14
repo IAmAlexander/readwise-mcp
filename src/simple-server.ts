@@ -15,6 +15,27 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Status endpoint
+app.get('/status', (req, res) => {
+  // Calculate rate limit info
+  const now = Date.now();
+  const timeElapsed = now - rateLimitTracker.windowStart;
+  const timeRemaining = Math.max(0, RATE_LIMIT_WINDOW - timeElapsed);
+  const resetTime = new Date(now + timeRemaining).toISOString();
+  const remaining = Math.max(0, MAX_REQUESTS_PER_WINDOW - rateLimitTracker.requestCount);
+  
+  res.status(200).json({
+    status: 'ok',
+    version: '1.0.0',
+    rate_limit: {
+      limit: MAX_REQUESTS_PER_WINDOW,
+      remaining: remaining,
+      reset: resetTime,
+      queue_length: rateLimitTracker.queue.length
+    }
+  });
+});
+
 // Rate limiting implementation
 interface RateLimitTracker {
   windowStart: number;
