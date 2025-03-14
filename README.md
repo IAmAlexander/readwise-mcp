@@ -8,6 +8,12 @@ This is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server
 - **Highlights**: Access all your highlighted passages
 - **Search**: Find content across your entire Readwise library
 - **Recent Content**: Quickly retrieve your latest saved items
+- **Tag Management**: Organize and filter content with tags
+- **Advanced Search**: Powerful filtering by author, date, tags, and more
+- **Reading Progress**: Track your reading status and completion percentage
+- **Bulk Operations**: Efficiently manage multiple documents at once
+- **Content Management**: Save, update, and delete content in your library
+- **Rate Limiting**: Smart handling of API limits to prevent throttling
 
 ## Installation
 
@@ -84,11 +90,163 @@ Once connected to Claude, unleash your Readwise knowledge with questions like:
 
 - "Find my highlights about 'vibes-first programming' and aesthetic IDEs"
 - "What did I save about Claude Code's secret Easter eggs?"
-- "Remind me of that hilarious MCP meme article I read last week"
-- "Show me all my saved snippets about adding RGB lighting to my code editor"
-- "What were those AI agents I bookmarked that can automatically generate lofi beats while I code?"
-- "Find that article about how to convince my product manager that 'vibe-driven development' is a real methodology"
-- "What was that post about creating a hackathon project using only ChatGPT, Claude, and excessive amounts of caffeine?"
+- "Show me all articles tagged with 'AI' and 'productivity'"
+- "What's in my reading list that I haven't started yet?"
+- "Find articles by Paul Graham that I saved in the last 3 months"
+- "Show me books I've completed reading"
+- "Save this article to my Readwise: https://example.com/interesting-article"
+- "Add the tag 'must-read' to that article about quantum computing"
+- "What's my reading progress on that book about machine learning?"
+
+## Feature Documentation
+
+### Basic Features
+
+#### Browsing Content
+- List books and articles: `GET /books`
+- Get highlights: `GET /highlights`
+- Search content: `GET /search?query=your_search_term`
+- Get recent content: `GET /recent?limit=10`
+
+### Tag Management
+
+Organize your content with tags:
+
+- **List all tags**: `GET /tags`
+- **Get tags for a document**: `GET /document/{document_id}/tags`
+- **Update all tags for a document**: `PUT /document/{document_id}/tags`
+  ```json
+  {
+    "tags": ["important", "ai", "research"]
+  }
+  ```
+- **Add a specific tag**: `POST /document/{document_id}/tags/{tag}`
+- **Remove a specific tag**: `DELETE /document/{document_id}/tags/{tag}`
+
+### Advanced Search
+
+Powerful filtering options:
+
+```
+GET /search/advanced?query=machine+learning&tags=ai,research&author=Smith&dateFrom=2023-01-01&dateTo=2023-12-31&sortBy=created_at&sortOrder=desc
+```
+
+Parameters:
+- `query`: Search text
+- `category`: Filter by content type (book, article, etc.)
+- `tags`: Comma-separated list of tags
+- `author`: Filter by author
+- `title`: Filter by title
+- `location`: Filter by location (new, later, archive, feed)
+- `dateFrom` & `dateTo`: Date range in ISO 8601 format
+- `sortBy`: Field to sort by (created_at, updated_at, title, author)
+- `sortOrder`: Sort direction (asc, desc)
+- `withHtmlContent`: Include HTML content in results (true/false)
+
+### Reading Progress Tracking
+
+Track your reading status and progress:
+
+- **Get reading progress**: `GET /document/{document_id}/progress`
+- **Update reading progress**: `PUT /document/{document_id}/progress`
+  ```json
+  {
+    "status": "in_progress",
+    "percentage": 45,
+    "current_page": 112,
+    "total_pages": 250
+  }
+  ```
+- **Get reading list**: `GET /reading-list?status=in_progress`
+
+Reading statuses:
+- `not_started`: Haven't begun reading
+- `in_progress`: Currently reading
+- `completed`: Finished reading
+
+### Content Management
+
+Save, update, and delete content:
+
+- **Save new content**: `POST /save`
+  ```json
+  {
+    "url": "https://example.com/article",
+    "title": "Optional title override",
+    "tags": ["ai", "research"]
+  }
+  ```
+- **Update document**: `PATCH /update/{document_id}`
+  ```json
+  {
+    "title": "New title",
+    "author": "New author"
+  }
+  ```
+- **Delete document**: `DELETE /delete/{document_id}?confirm=yes`
+  - **Safety feature**: Requires `confirm=yes` parameter to prevent accidental deletion
+
+### Bulk Operations
+
+Efficiently manage multiple documents at once:
+
+- **Bulk save**: `POST /bulk/save`
+  ```json
+  {
+    "items": [
+      { "url": "https://example.com/article1", "tags": ["ai"] },
+      { "url": "https://example.com/article2", "tags": ["research"] }
+    ],
+    "confirmation": "I confirm saving these items"
+  }
+  ```
+
+- **Bulk update**: `POST /bulk/update`
+  ```json
+  {
+    "updates": [
+      { "document_id": "123", "title": "New Title 1" },
+      { "document_id": "456", "tags": ["updated", "important"] }
+    ],
+    "confirmation": "I confirm these updates"
+  }
+  ```
+
+- **Bulk delete**: `POST /bulk/delete`
+  ```json
+  {
+    "document_ids": ["123", "456", "789"],
+    "confirmation": "I confirm deletion of these documents"
+  }
+  ```
+
+- **Bulk tag**: `POST /bulk/tag`
+  ```json
+  {
+    "document_ids": ["123", "456"],
+    "tags": ["important", "reference"],
+    "replace_existing": false,
+    "confirmation": "I confirm these tag changes"
+  }
+  ```
+
+#### Safety Confirmations
+
+All bulk operations and deletions require explicit confirmation to prevent accidental data loss:
+
+- **Single document deletion**: Requires `confirm=yes` query parameter
+- **Bulk save**: Requires `"confirmation": "I confirm saving these items"`
+- **Bulk update**: Requires `"confirmation": "I confirm these updates"`
+- **Bulk delete**: Requires `"confirmation": "I confirm deletion of these documents"`
+- **Bulk tag**: Requires `"confirmation": "I confirm these tag changes"`
+
+These confirmations act as a "human in the loop" safety mechanism to prevent unintended changes to your Readwise library.
+
+### API Status
+
+Check the API status and rate limit information:
+
+- **Get status**: `GET /status`
 
 ## Troubleshooting
 
@@ -113,11 +271,20 @@ If Claude cannot connect to the Readwise server:
 2. Check that port 3000 is not being used by another application
 3. Restart Claude Desktop
 
+### Rate Limiting
+
+The server includes built-in rate limiting to prevent hitting Readwise API limits. If you encounter rate limit errors:
+
+1. Wait a few minutes before trying again
+2. Reduce the frequency of requests
+3. Check the rate limit headers in the response for more information
+
 ## Privacy & Security
 
 - Your Readwise API token is stored securely in your local machine
 - Your Readwise data is only accessed when explicitly requested
 - No data is permanently stored on the MCP server
+- Safety confirmations prevent accidental data loss
 
 ## Development
 
