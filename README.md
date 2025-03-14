@@ -13,6 +13,7 @@ This is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server
 - **Reading Progress**: Track your reading status and completion percentage
 - **Bulk Operations**: Efficiently manage multiple documents at once
 - **Content Management**: Save, update, and delete content in your library
+- **Video Support**: Access and interact with videos saved in your Readwise Reader
 - **Rate Limiting**: Smart handling of API limits to prevent throttling
 
 ## Installation
@@ -98,6 +99,16 @@ Once connected to Claude, unleash your Readwise knowledge with questions like:
 - "Add the tag 'must-read' to that article about quantum computing"
 - "What's my reading progress on that book about machine learning?"
 
+### Video-Related Examples:
+- "Show me all YouTube videos I've saved in Readwise"
+- "What highlights did I make on that video about TypeScript?"
+- "What's my current playback position for that AI conference video?"
+- "Find videos in my library that mention 'machine learning'"
+- "Create a highlight at 23:45 in the TypeScript tutorial with the note 'Important pattern'"
+- "What did the speaker say around the 15-minute mark in that AI safety video?"
+- "Show me the transcript of the programming tutorial I saved yesterday"
+- "Jump to the part in the video where they discuss neural networks"
+
 ## Feature Documentation
 
 ### Basic Features
@@ -163,6 +174,129 @@ Reading statuses:
 - `not_started`: Haven't begun reading
 - `in_progress`: Currently reading
 - `completed`: Finished reading
+
+### Video Features
+
+Access and interact with videos saved in your Readwise Reader:
+
+#### Video Listing and Details
+
+- **List all videos**: `GET /videos?limit=20`
+  - Returns videos from YouTube, Vimeo, and other video platforms
+  - Supports pagination with `pageCursor` parameter
+  - Example response:
+    ```json
+    {
+      "count": 3,
+      "results": [
+        {
+          "id": "video1",
+          "title": "Introduction to TypeScript",
+          "url": "https://www.youtube.com/watch?v=abc123",
+          "author": "Tech Channel",
+          "tags": ["programming", "typescript"]
+        },
+        // More videos...
+      ],
+      "nextPageCursor": "next_page_token"
+    }
+    ```
+
+- **Get video details with transcript**: `GET /video/{document_id}`
+  - Returns complete video metadata and time-synced transcript
+  - Example response:
+    ```json
+    {
+      "id": "video1",
+      "title": "Introduction to TypeScript",
+      "url": "https://www.youtube.com/watch?v=abc123",
+      "transcript": [
+        { "timestamp": "0:00", "text": "Hello and welcome to this video." },
+        { "timestamp": "0:15", "text": "Today we'll be discussing TypeScript." },
+        // More transcript segments...
+      ]
+    }
+    ```
+
+#### Video Highlights
+
+- **Create highlight with timestamp**: `POST /video/{document_id}/highlight`
+  - Creates a new highlight at a specific point in the video
+  - Request body:
+    ```json
+    {
+      "text": "Important point about AI safety",
+      "timestamp": "14:35",
+      "note": "This relates to my research project"
+    }
+    ```
+  - Response includes the created highlight with ID
+
+- **Get video highlights with timestamps**: `GET /video/{document_id}/highlights`
+  - Returns all highlights for a specific video, sorted by timestamp
+  - Example response:
+    ```json
+    {
+      "count": 2,
+      "results": [
+        {
+          "id": "highlight1",
+          "text": "This is a key point to remember.",
+          "note": "Important concept",
+          "timestamp": "1:45"
+        },
+        {
+          "id": "highlight2",
+          "text": "To summarize what we've learned.",
+          "timestamp": "5:15"
+        }
+      ]
+    }
+    ```
+
+#### Video Playback Position
+
+- **Update video playback position**: `POST /video/{document_id}/position`
+  - Saves your current position in the video for later resuming
+  - Request body:
+    ```json
+    {
+      "position": 875.5,  // Position in seconds
+      "duration": 3600    // Total video duration in seconds
+    }
+    ```
+  - Automatically calculates progress percentage
+
+- **Get video playback position**: `GET /video/{document_id}/position`
+  - Retrieves your saved position in the video
+  - Example response:
+    ```json
+    {
+      "document_id": "video1",
+      "position": 875.5,
+      "percentage": 24,
+      "last_updated": "2023-03-15T14:30:00Z"
+    }
+    ```
+
+#### How Transcript Access Works
+
+The video transcript feature works by:
+1. Extracting the time-synced transcript from the video's HTML content
+2. Parsing timestamp and text pairs from the transcript
+3. Returning the transcript as an array of segments, each with a timestamp and text
+
+This allows you to:
+- Search for specific content within videos
+- Create highlights at precise moments
+- Jump directly to important points using timestamps
+- Reference video content with exact time context
+
+#### Limitations
+
+- Transcript quality depends on what's available from the original source
+- Not all video platforms provide transcripts (works best with YouTube)
+- Timestamp formats may vary between different video sources
 
 ### Content Management
 
@@ -264,27 +398,21 @@ The repository includes demo files to help you test and explore the Readwise MCP
   - Tracking reading progress
   - Performing bulk operations
 
-### Using the Demo Files
+### Video Features Demo
 
-1. Start the Readwise MCP server:
-   ```bash
-   npm run simple
-   ```
+The `demo/video-features.html` file provides a specialized interface for testing video-related functionality:
 
-2. Open one of the demo HTML files in your browser:
-   ```bash
-   open demo/test-connection.html
-   # or
-   open demo/mcp-demo.html
-   ```
+- Browse your saved videos
+- View video transcripts with timestamps
+- Create and manage highlights on video transcripts
+- Test video playback position tracking
+- Search within video transcripts
 
-3. Enter your Readwise API token when prompted and explore the functionality.
-
-These demo files are useful for:
-- Testing your Readwise API token
-- Exploring the available endpoints
-- Understanding the data structure
-- Debugging issues with the server
+To use this demo:
+1. Start the Readwise MCP server
+2. Open `demo/video-features.html` in your browser
+3. Enter your Readwise API token when prompted
+4. Explore your video library and interact with transcripts
 
 ## Troubleshooting
 
@@ -316,6 +444,20 @@ The server includes built-in rate limiting to prevent hitting Readwise API limit
 1. Wait a few minutes before trying again
 2. Reduce the frequency of requests
 3. Check the rate limit headers in the response for more information
+
+### Video-Specific Issues
+
+If you encounter issues with video features:
+
+1. **Missing transcripts**: Not all videos have transcripts available. YouTube videos typically have the best transcript support.
+
+2. **Transcript quality**: Transcripts are generated by the video platform and may contain errors or inaccuracies.
+
+3. **Timestamp format inconsistencies**: Different video platforms may use different timestamp formats. The API normalizes these when possible.
+
+4. **Video playback position not updating**: Ensure you're providing both `position` and `duration` parameters when updating playback position.
+
+5. **Highlights not appearing at correct timestamps**: Verify that the timestamp format matches what's used in the transcript (e.g., "14:35" or "14m35s").
 
 ## Privacy & Security
 

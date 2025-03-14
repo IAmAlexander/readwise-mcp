@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Readwise MCP - Video Features Demo</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1, h2, h3 {
+      color: #2c3e50;
+    }
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .panel {
+      flex: 1;
+      min-width: 300px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .video-list {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #eee;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .video-item {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+    .video-item:hover {
+      background-color: #f5f5f5;
+    }
+    .video-item.active {
+      background-color: #e3f2fd;
+    }
+    .transcript {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #eee;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .transcript-item {
+      padding: 5px;
+      border-bottom: 1px solid #f5f5f5;
+      display: flex;
+    }
+    .transcript-item:hover {
+      background-color: #f9f9f9;
+    }
+    .timestamp {
+      min-width: 60px;
+      color: #666;
+      cursor: pointer;
+    }
+    .timestamp:hover {
+      color: #1976d2;
+      text-decoration: underline;
+    }
+    .text {
+      flex: 1;
+    }
+    .highlight-list {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #eee;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .highlight-item {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 5px;
+      background-color: #fffde7;
+      border-radius: 4px;
+    }
+    .highlight-timestamp {
+      font-weight: bold;
+      color: #1976d2;
+      cursor: pointer;
+    }
+    .highlight-text {
+      margin: 5px 0;
+    }
+    .highlight-note {
+      font-style: italic;
+      color: #666;
+      font-size: 0.9em;
+      border-left: 3px solid #ccc;
+      padding-left: 10px;
+      margin-top: 5px;
+    }
+    button {
+      background-color: #1976d2;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px 0;
+    }
+    button:hover {
+      background-color: #1565c0;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .video-player {
+      width: 100%;
+      margin-bottom: 15px;
+    }
+    .progress-bar {
+      height: 20px;
+      background-color: #e0e0e0;
+      border-radius: 10px;
+      margin: 10px 0;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background-color: #4caf50;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .error {
+      color: #d32f2f;
+      background-color: #ffebee;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .success {
+      color: #388e3c;
+      background-color: #e8f5e9;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Readwise MCP - Video Features Demo</h1>
+  
+  <div id="auth-panel" class="panel">
+    <h2>Authentication</h2>
+    <div class="form-group">
+      <label for="api-token">Readwise API Token:</label>
+      <input type="password" id="api-token" placeholder="Enter your Readwise API token">
+    </div>
+    <button id="auth-button">Authenticate</button>
+    <div id="auth-status"></div>
+  </div>
+
+  <div id="main-content" class="hidden">
+    <div class="container">
+      <div class="panel">
+        <h2>Your Videos</h2>
+        <button id="load-videos">Load Videos</button>
+        <div id="video-list" class="video-list"></div>
+        <div id="pagination">
+          <button id="load-more" class="hidden">Load More</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Video Details</h2>
+        <div id="video-details">
+          <p>Select a video to view details</p>
+        </div>
+        <div id="video-player-container" class="hidden">
+          <h3>Video Player</h3>
+          <div id="video-player"></div>
+          <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+          <div id="playback-position">
+            Position: <span id="current-position">0:00</span> / <span id="total-duration">0:00</span> 
+            (<span id="progress-percentage">0%</span>)
+          </div>
+          <button id="save-position">Save Position</button>
+          <button id="load-position">Load Saved Position</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="panel">
+        <h2>Transcript</h2>
+        <div id="transcript" class="transcript">
+          <p>Select a video to view transcript</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Highlights</h2>
+        <button id="load-highlights" class="hidden">Load Highlights</button>
+        <div id="highlight-list" class="highlight-list">
+          <p>Select a video to view highlights</p>
+        </div>
+        
+        <h3>Create Highlight</h3>
+        <div id="create-highlight-form" class="hidden">
+          <div class="form-group">
+            <label for="highlight-text">Highlight Text:</label>
+            <textarea id="highlight-text" rows="3" placeholder="Enter highlight text"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="highlight-timestamp">Timestamp:</label>
+            <input type="text" id="highlight-timestamp" placeholder="e.g., 1:45">
+          </div>
+          <div class="form-group">
+            <label for="highlight-note">Note (optional):</label>
+            <textarea id="highlight-note" rows="2" placeholder="Add a note to your highlight"></textarea>
+          </div>
+          <button id="create-highlight-button">Create Highlight</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configuration
+    const API_BASE_URL = 'http://localhost:3000';
+    let apiToken = '';
+    let currentVideo = null;
+    let nextPageCursor = null;
+    let player = null;
+
+    // DOM Elements
+    const authPanel = document.getElementById('auth-panel');
+    const mainContent = document.getElementById('main-content');
+    const apiTokenInput = document.getElementById('api-token');
+    const authButton = document.getElementById('auth-button');
+    const authStatus = document.getElementById('auth-status');
+    const loadVideosButton = document.getElementById('load-videos');
+    const videoList = document.getElementById('video-list');
+    const loadMoreButton = document.getElementById('load-more');
+    const videoDetails = document.getElementById('video-details');
+    const videoPlayerContainer = document.getElementById('video-player-container');
+    const videoPlayer = document.getElementById('video-player');
+    const progressFill = document.getElementById('progress-fill');
+    const currentPositionEl = document.getElementById('current-position');
+    const totalDurationEl = document.getElementById('total-duration');
+    const progressPercentageEl = document.getElementById('progress-percentage');
+    const savePositionButton = document.getElementById('save-position');
+    const loadPositionButton = document.getElementById('load-position');
+    const transcript = document.getElementById('transcript');
+    const loadHighlightsButton = document.getElementById('load-highlights');
+    const highlightList = document.getElementById('highlight-list');
+    const createHighlightForm = document.getElementById('create-highlight-form');
+    const highlightText = document.getElementById('highlight-text');
+    const highlightTimestamp = document.getElementById('highlight-timestamp');
+    const highlightNote = document.getElementById('highlight-note');
+    const createHighlightButton = document.getElementById('create-highlight-button');
+
+    // Helper Functions
+    function showError(element, message) {
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error';
+      errorDiv.textContent = message;
+      element.innerHTML = '';
+      element.appendChild(errorDiv);
+    }
+
+    function showSuccess(element, message) {
+      const successDiv = document.createElement('div');
+      successDiv.className = 'success';
+      successDiv.textContent = message;
+      element.innerHTML = '';
+      element.appendChild(successDiv);
+    }
+
+    function formatTime(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = Math.floor(seconds % 60);
+      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    function parseTimestamp(timestamp) {
+      if (!timestamp) return 0;
+      
+      // Handle format like "1:45"
+      const parts = timestamp.split(':');
+      if (parts.length === 2) {
+        return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+      }
+      
+      // Handle format like "1m45s"
+      const minutesMatch = timestamp.match(/(\d+)m/);
+      const secondsMatch = timestamp.match(/(\d+)s/);
+      
+      let seconds = 0;
+      if (minutesMatch) seconds += parseInt(minutesMatch[1]) * 60;
+      if (secondsMatch) seconds += parseInt(secondsMatch[1]);
+      
+      return seconds;
+    }
+
+    // API Functions
+    async function makeApiRequest(endpoint, method = 'GET', data = null) {
+      try {
+        const options = {
+          method,
+          headers: {
+            'Authorization': `Token ${apiToken}`,
+            'Content-Type': 'application/json'
+          }
+        };
+
+        if (data) {
+          options.body = JSON.stringify(data);
+        }
+
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'API request failed');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('API Error:', error);
+        throw error;
+      }
+    }
+
+    async function checkAuth() {
+      try {
+        const response = await makeApiRequest('/status');
+        showSuccess(authStatus, 'Authentication successful!');
+        authPanel.classList.add('hidden');
+        mainContent.classList.remove('hidden');
+        return true;
+      } catch (error) {
+        showError(authStatus, 'Authentication failed: ' + error.message);
+        return false;
+      }
+    }
+
+    async function loadVideos() {
+      try {
+        videoList.innerHTML = '<p>Loading videos...</p>';
+        
+        const endpoint = nextPageCursor 
+          ? `/videos?limit=10&pageCursor=${nextPageCursor}` 
+          : '/videos?limit=10';
+        
+        const data = await makeApiRequest(endpoint);
+        
+        if (data.results.length === 0) {
+          videoList.innerHTML = '<p>No videos found in your Readwise library.</p>';
+          return;
+        }
+
+        if (nextPageCursor === null) {
+          videoList.innerHTML = '';
+        }
+
+        data.results.forEach(video => {
+          const videoItem = document.createElement('div');
+          videoItem.className = 'video-item';
+          videoItem.dataset.id = video.id;
+          videoItem.innerHTML = `
+            <strong>${video.title}</strong>
+            <div>Source: ${video.url}</div>
+            <div>Added: ${new Date(video.created_at).toLocaleDateString()}</div>
+          `;
+          videoItem.addEventListener('click', () => loadVideoDetails(video.id));
+          videoList.appendChild(videoItem);
+        });
+
+        nextPageCursor = data.nextPageCursor;
+        if (nextPageCursor) {
+          loadMoreButton.classList.remove('hidden');
+        } else {
+          loadMoreButton.classList.add('hidden');
+        }
+      } catch (error) {
+        showError(videoList, 'Failed to load videos: ' + error.message);
+      }
+    }
+
+    async function loadVideoDetails(videoId) {
+      try {
+        // Highlight selected video
+        document.querySelectorAll('.video-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        document.querySelector(`.video-item[data-id="${videoId}"]`)?.classList.add('active');
+
+        videoDetails.innerHTML = '<p>Loading video details...</p>';
+        transcript.innerHTML = '<p>Loading transcript...</p>';
+        highlightList.innerHTML = '<p>Loading highlights...</p>';
+        
+        const data = await makeApiRequest(`/video/${videoId}`);
+        currentVideo = data;
+        
+        // Display video details
+        videoDetails.innerHTML = `
+          <h3>${data.title}</h3>
+          <p><strong>Author:</strong> ${data.author || 'Unknown'}</p>
+          <p><strong>Source:</strong> <a href="${data.url}" target="_blank">${data.url}</a></p>
+          <p><strong>Added:</strong> ${new Date(data.created_at).toLocaleDateString()}</p>
+          <p><strong>Tags:</strong> ${data.tags?.join(', ') || 'None'}</p>
+        `;
+
+        // Setup YouTube player if it's a YouTube video
+        if (data.url && (data.url.includes('youtube.com') || data.url.includes('youtu.be'))) {
+          setupYouTubePlayer(data.url);
+        } else {
+          videoPlayerContainer.classList.add('hidden');
+        }
+        
+        // Display transcript
+        displayTranscript(data.transcript);
+        
+        // Load highlights
+        loadHighlights(videoId);
+        
+        // Show highlight form
+        createHighlightForm.classList.remove('hidden');
+        loadHighlightsButton.classList.remove('hidden');
+      } catch (error) {
+        showError(videoDetails, 'Failed to load video details: ' + error.message);
+        transcript.innerHTML = '<p>Failed to load transcript.</p>';
+        highlightList.innerHTML = '<p>Failed to load highlights.</p>';
+      }
+    }
+
+    function displayTranscript(transcriptData) {
+      if (!transcriptData || transcriptData.length === 0) {
+        transcript.innerHTML = '<p>No transcript available for this video.</p>';
+        return;
+      }
+
+      transcript.innerHTML = '';
+      
+      transcriptData.forEach(item => {
+        const transcriptItem = document.createElement('div');
+        transcriptItem.className = 'transcript-item';
+        
+        const timestamp = document.createElement('div');
+        timestamp.className = 'timestamp';
+        timestamp.textContent = item.timestamp;
+        timestamp.addEventListener('click', () => {
+          if (player) {
+            const seconds = parseTimestamp(item.timestamp);
+            player.seekTo(seconds);
+            player.playVideo();
+          }
+        });
+        
+        const text = document.createElement('div');
+        text.className = 'text';
+        text.textContent = item.text;
+        
+        transcriptItem.appendChild(timestamp);
+        transcriptItem.appendChild(text);
+        transcript.appendChild(transcriptItem);
+      });
+    }
+
+    async function loadHighlights(videoId) {
+      try {
+        const data = await makeApiRequest(`/video/${videoId}/highlights`);
+        
+        if (!data.results || data.results.length === 0) {
+          highlightList.innerHTML = '<p>No highlights found for this video.</p>';
+          return;
+        }
+
+        highlightList.innerHTML = '';
+        
+        data.results.forEach(highlight => {
+          const highlightItem = document.createElement('div');
+          highlightItem.className = 'highlight-item';
+          
+          let content = '';
+          if (highlight.timestamp) {
+            content += `<div class="highlight-timestamp" data-timestamp="${highlight.timestamp}">${highlight.timestamp}</div>`;
+          }
+          
+          content += `<div class="highlight-text">${highlight.text}</div>`;
+          
+          if (highlight.note) {
+            content += `<div class="highlight-note">${highlight.note}</div>`;
+          }
+          
+          highlightItem.innerHTML = content;
+          
+          // Add click event to timestamp
+          highlightList.appendChild(highlightItem);
+        });
+        
+        // Add click events to timestamps
+        document.querySelectorAll('.highlight-timestamp').forEach(el => {
+          el.addEventListener('click', () => {
+            if (player) {
+              const seconds = parseTimestamp(el.dataset.timestamp);
+              player.seekTo(seconds);
+              player.playVideo();
+            }
+          });
+        });
+      } catch (error) {
+        showError(highlightList, 'Failed to load highlights: ' + error.message);
+      }
+    }
+
+    async function createHighlight() {
+      try {
+        if (!currentVideo) {
+          showError(createHighlightForm, 'No video selected.');
+          return;
+        }
+        
+        const text = highlightText.value.trim();
+        const timestamp = highlightTimestamp.value.trim();
+        const note = highlightNote.value.trim();
+        
+        if (!text) {
+          showError(createHighlightForm, 'Highlight text is required.');
+          return;
+        }
+        
+        if (!timestamp) {
+          showError(createHighlightForm, 'Timestamp is required.');
+          return;
+        }
+        
+        const data = {
+          text,
+          timestamp,
+          note: note || undefined
+        };
+        
+        await makeApiRequest(`/video/${currentVideo.id}/highlight`, 'POST', data);
+        
+        showSuccess(createHighlightForm, 'Highlight created successfully!');
+        
+        // Clear form
+        highlightText.value = '';
+        highlightTimestamp.value = '';
+        highlightNote.value = '';
+        
+        // Reload highlights
+        loadHighlights(currentVideo.id);
+      } catch (error) {
+        showError(createHighlightForm, 'Failed to create highlight: ' + error.message);
+      }
+    }
+
+    async function savePosition() {
+      try {
+        if (!currentVideo || !player) {
+          showError(videoPlayerContainer, 'No video playing.');
+          return;
+        }
+        
+        const position = player.getCurrentTime();
+        const duration = player.getDuration();
+        
+        if (isNaN(position) || isNaN(duration)) {
+          showError(videoPlayerContainer, 'Invalid position or duration.');
+          return;
+        }
+        
+        const data = {
+          position,
+          duration
+        };
+        
+        await makeApiRequest(`/video/${currentVideo.id}/position`, 'POST', data);
+        
+        showSuccess(videoPlayerContainer, 'Position saved successfully!');
+      } catch (error) {
+        showError(videoPlayerContainer, 'Failed to save position: ' + error.message);
+      }
+    }
+
+    async function loadPosition() {
+      try {
+        if (!currentVideo || !player) {
+          showError(videoPlayerContainer, 'No video playing.');
+          return;
+        }
+        
+        const data = await makeApiRequest(`/video/${currentVideo.id}/position`);
+        
+        if (data.position) {
+          player.seekTo(data.position);
+          showSuccess(videoPlayerContainer, `Resumed from ${formatTime(data.position)} (${data.percentage}%)`);
+        } else {
+          showSuccess(videoPlayerContainer, 'No saved position found.');
+        }
+      } catch (error) {
+        showError(videoPlayerContainer, 'Failed to load position: ' + error.message);
+      }
+    }
+
+    function setupYouTubePlayer(url) {
+      // Extract video ID from URL
+      let videoId;
+      if (url.includes('youtube.com')) {
+        const urlParams = new URLSearchParams(new URL(url).search);
+        videoId = urlParams.get('v');
+      } else if (url.includes('youtu.be')) {
+        videoId = url.split('/').pop();
+      }
+      
+      if (!videoId) {
+        videoPlayerContainer.classList.add('hidden');
+        return;
+      }
+      
+      videoPlayerContainer.classList.remove('hidden');
+      
+      // Load YouTube API if not already loaded
+      if (!window.YT) {
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        
+        window.onYouTubeIframeAPIReady = () => {
+          createYouTubePlayer(videoId);
+        };
+      } else {
+        createYouTubePlayer(videoId);
+      }
+    }
+
+    function createYouTubePlayer(videoId) {
+      // Clear previous player
+      videoPlayer.innerHTML = '';
+      
+      // Create player div
+      const playerDiv = document.createElement('div');
+      playerDiv.id = 'youtube-player';
+      videoPlayer.appendChild(playerDiv);
+      
+      // Create player
+      player = new YT.Player('youtube-player', {
+        height: '360',
+        width: '640',
+        videoId: videoId,
+        events: {
+          'onReady': onPlayerReady,
+          'onStateChange': onPlayerStateChange
+        }
+      });
+    }
+
+    function onPlayerReady(event) {
+      // Player is ready
+      const duration = player.getDuration();
+      totalDurationEl.textContent = formatTime(duration);
+      
+      // Update current time every second
+      setInterval(() => {
+        if (player && player.getCurrentTime) {
+          const currentTime = player.getCurrentTime();
+          const duration = player.getDuration();
+          const percentage = Math.round((currentTime / duration) * 100);
+          
+          currentPositionEl.textContent = formatTime(currentTime);
+          progressPercentageEl.textContent = `${percentage}%`;
+          progressFill.style.width = `${percentage}%`;
+          
+          // Update timestamp input if empty
+          if (!highlightTimestamp.value) {
+            highlightTimestamp.value = formatTime(currentTime);
+          }
+        }
+      }, 1000);
+    }
+
+    function onPlayerStateChange(event) {
+      // Handle player state changes
+    }
+
+    // Event Listeners
+    authButton.addEventListener('click', () => {
+      apiToken = apiTokenInput.value.trim();
+      if (!apiToken) {
+        showError(authStatus, 'API token is required');
+        return;
+      }
+      checkAuth();
+    });
+
+    loadVideosButton.addEventListener('click', () => {
+      nextPageCursor = null;
+      loadVideos();
+    });
+
+    loadMoreButton.addEventListener('click', loadVideos);
+
+    loadHighlightsButton.addEventListener('click', () => {
+      if (currentVideo) {
+        loadHighlights(currentVideo.id);
+      }
+    });
+
+    createHighlightButton.addEventListener('click', createHighlight);
+
+    savePositionButton.addEventListener('click', savePosition);
+
+    loadPositionButton.addEventListener('click', loadPosition);
+
+    // Check for stored token
+    const storedToken = localStorage.getItem('readwise_api_token');
+    if (storedToken) {
+      apiTokenInput.value = storedToken;
+      apiToken = storedToken;
+      checkAuth();
+    }
+  </script>
+</body>
+</html> 
