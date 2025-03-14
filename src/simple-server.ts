@@ -43,18 +43,99 @@ interface OpenAPIParameter {
   required?: boolean;
   schema: {
     type: string;
-    default?: number;
+    default?: number | boolean;
     maximum?: number;
   };
 }
 
 interface OpenAPIPath {
   [path: string]: {
-    get: {
+    get?: {
       operationId: string;
       summary: string;
       description: string;
       parameters: OpenAPIParameter[];
+      responses: {
+        [statusCode: string]: {
+          description: string;
+          content?: {
+            [contentType: string]: {
+              schema: {
+                type: string;
+              };
+            };
+          };
+        };
+      };
+    };
+    post?: {
+      operationId: string;
+      summary: string;
+      description: string;
+      requestBody?: {
+        required: boolean;
+        content: {
+          [contentType: string]: {
+            schema: {
+              type: string;
+              properties: {
+                [property: string]: any;
+              };
+              required?: string[];
+            };
+          };
+        };
+      };
+      responses: {
+        [statusCode: string]: {
+          description: string;
+          content?: {
+            [contentType: string]: {
+              schema: {
+                type: string;
+              };
+            };
+          };
+        };
+      };
+    };
+    patch?: {
+      operationId: string;
+      summary: string;
+      description: string;
+      parameters?: OpenAPIParameter[];
+      requestBody?: {
+        required: boolean;
+        content: {
+          [contentType: string]: {
+            schema: {
+              type: string;
+              properties: {
+                [property: string]: any;
+              };
+              required?: string[];
+            };
+          };
+        };
+      };
+      responses: {
+        [statusCode: string]: {
+          description: string;
+          content?: {
+            [contentType: string]: {
+              schema: {
+                type: string;
+              };
+            };
+          };
+        };
+      };
+    };
+    delete?: {
+      operationId: string;
+      summary: string;
+      description: string;
+      parameters?: OpenAPIParameter[];
       responses: {
         [statusCode: string]: {
           description: string;
@@ -91,6 +172,11 @@ interface QueryParams {
   category?: string;
   book_id?: number | string;
   query?: string;
+  limit?: number | string;
+  location?: string;
+  updatedAfter?: string;
+  pageCursor?: string;
+  withHtmlContent?: boolean | string;
 }
 
 interface AuthResponse {
@@ -167,6 +253,39 @@ const openApiSpec: OpenAPISpec = {
             description: "Filter by category (book, article, tweet, etc.)",
             schema: {
               type: "string"
+            }
+          },
+          {
+            name: "location",
+            in: "query",
+            description: "Filter by location (new, later, archive, feed)",
+            schema: {
+              type: "string"
+            }
+          },
+          {
+            name: "updatedAfter",
+            in: "query",
+            description: "Filter by documents updated after this date (ISO 8601 format)",
+            schema: {
+              type: "string"
+            }
+          },
+          {
+            name: "pageCursor",
+            in: "query",
+            description: "Cursor for pagination (from previous response)",
+            schema: {
+              type: "string"
+            }
+          },
+          {
+            name: "withHtmlContent",
+            in: "query",
+            description: "Include HTML content in the response",
+            schema: {
+              type: "boolean",
+              default: false
             }
           }
         ],
@@ -310,6 +429,188 @@ const openApiSpec: OpenAPISpec = {
           },
           "401": {
             description: "Unauthorized - Invalid token"
+          },
+          "500": {
+            description: "Server error"
+          }
+        }
+      }
+    },
+    "/save": {
+      post: {
+        operationId: "saveContent",
+        summary: "Save new content to Readwise",
+        description: "Saves a new article, webpage, or note to the user's Readwise library",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  url: { 
+                    type: "string", 
+                    description: "URL of the content to save" 
+                  },
+                  title: { 
+                    type: "string", 
+                    description: "Optional title override" 
+                  },
+                  author: { 
+                    type: "string", 
+                    description: "Optional author override" 
+                  },
+                  html: { 
+                    type: "string", 
+                    description: "Optional HTML content if not scraping from URL" 
+                  },
+                  tags: { 
+                    type: "array", 
+                    items: { type: "string" },
+                    description: "Tags to apply to the saved content"
+                  },
+                  summary: { 
+                    type: "string", 
+                    description: "Optional summary of the content" 
+                  },
+                  notes: { 
+                    type: "string", 
+                    description: "Optional notes about the content" 
+                  },
+                  location: { 
+                    type: "string", 
+                    description: "Where to save the content (new, later, archive, feed)" 
+                  }
+                },
+                required: ["url"]
+              }
+            }
+          }
+        },
+        responses: {
+          "201": {
+            description: "Content saved successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object"
+                }
+              }
+            }
+          },
+          "401": {
+            description: "Unauthorized - Invalid token"
+          },
+          "500": {
+            description: "Server error"
+          }
+        }
+      }
+    },
+    "/update/{document_id}": {
+      patch: {
+        operationId: "updateDocument",
+        summary: "Update document metadata",
+        description: "Updates metadata for an existing document in Readwise",
+        parameters: [
+          {
+            name: "document_id",
+            in: "path",
+            required: true,
+            description: "ID of the document to update",
+            schema: {
+              type: "string"
+            }
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  title: { 
+                    type: "string", 
+                    description: "New title for the document" 
+                  },
+                  author: { 
+                    type: "string", 
+                    description: "New author for the document" 
+                  },
+                  summary: { 
+                    type: "string", 
+                    description: "New summary for the document" 
+                  },
+                  published_date: { 
+                    type: "string", 
+                    description: "New published date in ISO 8601 format" 
+                  },
+                  image_url: { 
+                    type: "string", 
+                    description: "New cover image URL" 
+                  },
+                  location: { 
+                    type: "string", 
+                    description: "New location (new, later, archive, feed)" 
+                  },
+                  category: { 
+                    type: "string", 
+                    description: "New category (article, email, rss, etc.)" 
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": {
+            description: "Document updated successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object"
+                }
+              }
+            }
+          },
+          "401": {
+            description: "Unauthorized - Invalid token"
+          },
+          "404": {
+            description: "Document not found"
+          },
+          "500": {
+            description: "Server error"
+          }
+        }
+      }
+    },
+    "/delete/{document_id}": {
+      delete: {
+        operationId: "deleteDocument",
+        summary: "Delete a document",
+        description: "Deletes a document from the user's Readwise library",
+        parameters: [
+          {
+            name: "document_id",
+            in: "path",
+            required: true,
+            description: "ID of the document to delete",
+            schema: {
+              type: "string"
+            }
+          }
+        ],
+        responses: {
+          "204": {
+            description: "Document deleted successfully"
+          },
+          "401": {
+            description: "Unauthorized - Invalid token"
+          },
+          "404": {
+            description: "Document not found"
           },
           "500": {
             description: "Server error"
@@ -474,12 +775,25 @@ app.get('/books', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'No token provided' });
     }
     
-    const { page = 1, page_size = 20, category } = req.query as QueryParams;
+    const { 
+      page = 1, 
+      page_size = 20, 
+      category, 
+      location, 
+      updatedAfter, 
+      pageCursor, 
+      withHtmlContent 
+    } = req.query as QueryParams;
     
+    // Prepare query parameters
     const params: QueryParams = { page, page_size };
     if (category) params.category = category;
+    if (location) params.location = location;
+    if (updatedAfter) params.updatedAfter = updatedAfter;
+    if (pageCursor) params.pageCursor = pageCursor;
+    if (withHtmlContent) params.withHtmlContent = withHtmlContent;
     
-    const response: AxiosResponse = await axios.get(`${READWISE_API_BASE}/books/`, {
+    const response: AxiosResponse = await axios.get(`${READWISE_API_BASE}/v3/list/`, {
       headers: {
         Authorization: `Token ${token}`,
       },
@@ -606,6 +920,151 @@ app.get('/recent', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching recent content:', error);
     res.status(500).json({ error: 'Failed to fetch recent content' });
+  }
+});
+
+app.post('/save', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+    
+    const { url, title, author, html, tags, summary, notes, location, ...otherParams } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
+    }
+    
+    // Prepare the request payload
+    const payload: any = {
+      url,
+      saved_using: 'readwise-mcp'
+    };
+    
+    // Add optional parameters if they exist
+    if (title) payload.title = title;
+    if (author) payload.author = author;
+    if (html) payload.html = html;
+    if (tags) payload.tags = tags;
+    if (summary) payload.summary = summary;
+    if (notes) payload.notes = notes;
+    if (location) payload.location = location;
+    
+    // Send the request to Readwise API
+    const response: AxiosResponse = await axios.post(
+      `${READWISE_API_BASE}/v3/save/`,
+      payload,
+      {
+        headers: {
+          Authorization: `Token ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    res.status(201).json(response.data);
+  } catch (error) {
+    console.error('Error saving content:', error);
+    res.status(500).json({ error: 'Failed to save content to Readwise' });
+  }
+});
+
+app.patch('/update/:document_id', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+    
+    const documentId = req.params.document_id;
+    
+    if (!documentId) {
+      return res.status(400).json({ error: 'Document ID is required' });
+    }
+    
+    const { title, author, summary, published_date, image_url, location, category } = req.body;
+    
+    // Prepare the request payload with only the fields that are provided
+    const payload: any = {};
+    if (title !== undefined) payload.title = title;
+    if (author !== undefined) payload.author = author;
+    if (summary !== undefined) payload.summary = summary;
+    if (published_date !== undefined) payload.published_date = published_date;
+    if (image_url !== undefined) payload.image_url = image_url;
+    if (location !== undefined) payload.location = location;
+    if (category !== undefined) payload.category = category;
+    
+    // If no fields to update were provided
+    if (Object.keys(payload).length === 0) {
+      return res.status(400).json({ error: 'No update fields provided' });
+    }
+    
+    // Send the request to Readwise API
+    const response: AxiosResponse = await axios.patch(
+      `${READWISE_API_BASE}/v3/update/${documentId}/`,
+      payload,
+      {
+        headers: {
+          Authorization: `Token ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    res.status(200).json(response.data);
+  } catch (error: any) {
+    console.error('Error updating document:', error);
+    
+    // Check if it's a 404 error from the Readwise API
+    if (error.response && error.response.status === 404) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    
+    res.status(500).json({ error: 'Failed to update document in Readwise' });
+  }
+});
+
+app.delete('/delete/:document_id', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+    
+    const documentId = req.params.document_id;
+    
+    if (!documentId) {
+      return res.status(400).json({ error: 'Document ID is required' });
+    }
+    
+    // Send the delete request to Readwise API
+    await axios.delete(
+      `${READWISE_API_BASE}/v3/delete/${documentId}/`,
+      {
+        headers: {
+          Authorization: `Token ${token}`
+        }
+      }
+    );
+    
+    // Return success with no content
+    res.status(204).send();
+  } catch (error: any) {
+    console.error('Error deleting document:', error);
+    
+    // Check if it's a 404 error from the Readwise API
+    if (error.response && error.response.status === 404) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    
+    res.status(500).json({ error: 'Failed to delete document from Readwise' });
   }
 });
 
