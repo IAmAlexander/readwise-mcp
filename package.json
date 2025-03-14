@@ -15,7 +15,11 @@
         "test:search": "jest advanced-search",
         "test:bulk": "jest bulk-operations",
         "test:progress": "jest reading-progress",
-        "test:delete": "jest delete-confirmation"
+        "test:delete": "jest delete-confirmation",
+        "run-inspector": "ts-node run-inspector.ts",
+        "test-mcp": "ts-node test-mcp.ts",
+        "test-mcp-client": "ts-node test-mcp-client.ts",
+        "mcp-test": "ts-node mcp-test.ts"
     },
     "keywords": [
         "mcp",

@@ -4,8 +4,13 @@ import axios, { AxiosResponse, AxiosError } from 'axios';
 import fs from 'fs';
 import path from 'path';
 
+// Check if running under MCP Inspector
+const isMCPInspector = process.env.MCP_INSPECTOR === 'true' || 
+                       process.argv.includes('--mcp-inspector') ||
+                       process.env.NODE_ENV === 'mcp-inspector';
+
 // Configuration
-const PORT = process.env.PORT || 3000;
+const PORT = isMCPInspector ? 0 : (process.env.PORT || 3000); // Use port 0 (random available port) when run through MCP Inspector
 const READWISE_API_BASE = 'https://readwise.io/api/v2';
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute in milliseconds
 const MAX_REQUESTS_PER_WINDOW = 100; // Maximum requests per minute
@@ -1692,6 +1697,52 @@ const openApiSpec: OpenAPISpec = {
           }
         }
       }
+    },
+    "/manifest.json": {
+      get: {
+        operationId: "getManifest",
+        summary: "Get MCP manifest",
+        description: "Returns the MCP manifest for this server",
+        parameters: [],
+        responses: {
+          "200": {
+            description: "Successful operation",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object"
+                }
+              }
+            }
+          },
+          "500": {
+            description: "Server error"
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      get: {
+        operationId: "getOpenAPISpec",
+        summary: "Get OpenAPI specification",
+        description: "Returns the OpenAPI specification for this server",
+        parameters: [],
+        responses: {
+          "200": {
+            description: "Successful operation",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object"
+                }
+              }
+            }
+          },
+          "500": {
+            description: "Server error"
+          }
+        }
+      }
     }
   }
 };
@@ -2999,8 +3050,14 @@ app.post('/bulk/tag', async (req: Request, res: Response) => {
 });
 
 // Start the server
-app.listen(PORT, () => {
-  console.log(`Readwise MCP Server running on port ${PORT}`);
-  console.log(`MCP Manifest available at: http://localhost:${PORT}/manifest.json`);
-  console.log(`OpenAPI specification available at: http://localhost:${PORT}/openapi.json`);
-}); 
+const server = app.listen(PORT, () => {
+  const actualPort = (server.address() as any).port;
+  console.log(`Readwise MCP Server running on port ${actualPort}`);
+  console.log(`MCP Manifest available at: http://localhost:${actualPort}/manifest.json`);
+  console.log(`OpenAPI specification available at: http://localhost:${actualPort}/openapi.json`);
+});
+
+// Export server for testing
+if (typeof module !== 'undefined') {
+  module.exports = { app, server };
+} 
