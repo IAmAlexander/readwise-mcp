@@ -53,11 +53,14 @@ const mcp = new MCP({
     legal_info_url: "https://readwise.io/terms"
   },
   authorize: async (data?: AuthorizationData) => {
+    // For lazy loading, always return true during initialization
+    // The actual validation will happen when a tool is called
     if (!data?.access_token) {
-      return false;
+      // No token provided, but we'll still return true for lazy loading
+      return true;
     }
     
-    // Validate the token with Readwise
+    // If a token is provided, validate it with Readwise
     try {
       const response = await axios.get(`${READWISE_API_BASE}/books/`, {
         headers: {
@@ -72,12 +75,23 @@ const mcp = new MCP({
       return response.status === 200;
     } catch (error) {
       console.error('Token validation error:', error);
-      return false;
+      // Still return true for lazy loading, we'll handle errors during tool calls
+      return true;
     }
   },
   async getClient(data: { access_token?: string }) {
     if (!data?.access_token) {
-      throw new Error('No access token provided');
+      // For lazy loading, return a client that will prompt for authentication when used
+      return {
+        client: {
+          get: async (url: string, config?: any) => {
+            // When a tool is called without a token, throw a specific error
+            // that will trigger the authentication flow
+            throw new Error('Authentication required');
+          }
+        },
+        sessionData: { needsAuth: true }
+      };
     }
     
     // Create and return an Axios instance for Readwise API calls
@@ -337,103 +351,162 @@ const openApiSpec = {
 mcp.registerOpenAPI(openApiSpec, {
   // List books endpoint
   listBooks: async ({ client }: { client: Client }, request: Request) => {
-    const { page = 1, page_size = 20, category } = request.query;
-    
-    const params: Record<string, any> = { page, page_size };
-    if (category) params.category = category;
-    
-    const response = await client.get('/books/', { params });
-    return response.data;
+    try {
+      const { page = 1, page_size = 20, category } = request.query;
+      
+      const params: Record<string, any> = { page, page_size };
+      if (category) params.category = category;
+      
+      const response = await client.get('/books/', { params });
+      return response.data;
+    } catch (error: any) {
+      if (error.message === 'Authentication required') {
+        // Provide a helpful error message for users
+        throw new Error('Please authenticate with your Readwise account to access your books. You can get your API token from https://readwise.io/access_token');
+      }
+      // Re-throw other errors
+      throw error;
+    }
   },
   
   // Get a specific book
   getBook: async ({ client }: { client: Client }, request: Request) => {
-    const { book_id } = request.params;
-    
-    // Get book details
-    const bookResponse = await client.get(`/books/${book_id}`);
-    
-    // Get highlights for this book
-    const highlightsResponse = await client.get('/highlights/', {
-      params: {
-        book_id,
-        page_size: 100
+    try {
+      const { book_id } = request.params;
+      
+      // Get book details
+      const bookResponse = await client.get(`/books/${book_id}`);
+      
+      // Get highlights for this book
+      const highlightsResponse = await client.get('/highlights/', {
+        params: {
+          book_id,
+          page_size: 100
+        }
+      });
+      
+      // Combine the data
+      const book = bookResponse.data;
+      book.highlights = highlightsResponse.data.results;
+      
+      return book;
+    } catch (error: any) {
+      if (error.message === 'Authentication required') {
+        // Provide a helpful error message for users
+        throw new Error('Please authenticate with your Readwise account to access your books. You can get your API token from https://readwise.io/access_token');
       }
-    });
-    
-    // Combine the data
-    const book = bookResponse.data;
-    book.highlights = highlightsResponse.data.results;
-    
-    return book;
+      // Re-throw other errors
+      throw error;
+    }
   },
   
   // List highlights
   listHighlights: async ({ client }: { client: Client }, request: Request) => {
-    const { 
-      page = 1, 
-      page_size = 20,
-      book_id,
-      updated__gt,
-      highlighted_at__gt
-    } = request.query;
-    
-    const params: Record<string, any> = { page, page_size };
-    
-    // Add optional filters if provided
-    if (book_id) params.book_id = book_id;
-    if (updated__gt) params.updated__gt = updated__gt;
-    if (highlighted_at__gt) params.highlighted_at__gt = highlighted_at__gt;
-    
-    const response = await client.get('/highlights/', { params });
-    return response.data;
+    try {
+      const { 
+        page = 1, 
+        page_size = 20,
+        book_id,
+        updated__gt,
+        highlighted_at__gt
+      } = request.query;
+      
+      const params: Record<string, any> = { page, page_size };
+      
+      // Add optional filters if provided
+      if (book_id) params.book_id = book_id;
+      if (updated__gt) params.updated__gt = updated__gt;
+      if (highlighted_at__gt) params.highlighted_at__gt = highlighted_at__gt;
+      
+      const response = await client.get('/highlights/', { params });
+      return response.data;
+    } catch (error: any) {
+      if (error.message === 'Authentication required') {
+        // Provide a helpful error message for users
+        throw new Error('Please authenticate with your Readwise account to access your highlights. You can get your API token from https://readwise.io/access_token');
+      }
+      // Re-throw other errors
+      throw error;
+    }
   },
   
   // Search Readwise
   searchReadwise: async ({ client }: { client: Client }, request: Request) => {
-    const { query, page = 1, page_size = 20 } = request.query;
-    
-    if (!query) {
-      throw new Error('Search query is required');
-    }
-    
-    const response = await client.get('/search/', {
-      params: {
-        query,
-        page,
-        page_size
+    try {
+      const { query, page = 1, page_size = 20 } = request.query;
+      
+      if (!query) {
+        throw new Error('Search query is required');
       }
-    });
-    
-    return response.data;
+      
+      const response = await client.get('/search/', {
+        params: {
+          query,
+          page,
+          page_size
+        }
+      });
+      
+      return response.data;
+    } catch (error: any) {
+      if (error.message === 'Authentication required') {
+        // Provide a helpful error message for users
+        throw new Error('Please authenticate with your Readwise account to search your content. You can get your API token from https://readwise.io/access_token');
+      }
+      // Re-throw other errors
+      throw error;
+    }
+  },
+  
+  // Get a specific highlight
+  getHighlight: async ({ client }: { client: Client }, request: Request) => {
+    try {
+      const { highlight_id } = request.params;
+      
+      const response = await client.get(`/highlights/${highlight_id}`);
+      return response.data;
+    } catch (error: any) {
+      if (error.message === 'Authentication required') {
+        // Provide a helpful error message for users
+        throw new Error('Please authenticate with your Readwise account to access your highlights. You can get your API token from https://readwise.io/access_token');
+      }
+      // Re-throw other errors
+      throw error;
+    }
   },
   
   // Get recent content
   getRecentContent: async ({ client }: { client: Client }, request: Request) => {
-    const { limit = 10 } = request.query;
-    
-    // Get recent books
-    const booksResponse = await client.get('/books/', {
-      params: {
-        page: 1,
-        page_size: limit,
-        order_by: '-updated'
+    try {
+      const { limit = 10 } = request.query;
+      
+      // Get recent books
+      const booksResponse = await client.get('/books/', {
+        params: {
+          page_size: limit
+        }
+      });
+      
+      // Get recent highlights
+      const highlightsResponse = await client.get('/highlights/', {
+        params: {
+          page_size: limit
+        }
+      });
+      
+      // Combine the data
+      return {
+        recent_books: booksResponse.data.results,
+        recent_highlights: highlightsResponse.data.results
+      };
+    } catch (error: any) {
+      if (error.message === 'Authentication required') {
+        // Provide a helpful error message for users
+        throw new Error('Please authenticate with your Readwise account to access your recent content. You can get your API token from https://readwise.io/access_token');
       }
-    });
-    
-    // Get recent highlights
-    const highlightsResponse = await client.get('/highlights/', {
-      params: {
-        page: 1,
-        page_size: limit,
-        order_by: '-highlighted_at'
-      }
-    });
-    
-    return {
-      recent_books: booksResponse.data.results,
-      recent_highlights: highlightsResponse.data.results
-    };
+      // Re-throw other errors
+      throw error;
+    }
   }
 });
 
