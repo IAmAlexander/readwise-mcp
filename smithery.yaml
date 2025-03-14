@@ -4,6 +4,7 @@ type: docker
 # Build configuration
 build:
   dockerfile: Dockerfile
+  dockerBuildPath: .
 
 # Runtime configuration
 runtime:
@@ -12,3 +13,20 @@ runtime:
 # MCP configuration  
 mcp:
   manifest: mcp-manifest.json
+
+# Start command configuration
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP
+    type: object
+    properties:
+      readwiseApiKey:
+        type: string
+        description: The API key for the Readwise service (optional).
+  commandFunction: |
+    (config) => ({ 
+      command: 'node', 
+      args: ['dist/index.js'], 
+      env: config.readwiseApiKey ? { READWISE_API_KEY: config.readwiseApiKey } : {} 
+    })
