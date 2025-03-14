@@ -248,6 +248,44 @@ Check the API status and rate limit information:
 
 - **Get status**: `GET /status`
 
+## Demo and Testing
+
+The repository includes demo files to help you test and explore the Readwise MCP server functionality:
+
+### Demo Files
+
+- **test-connection.html**: A simple HTML page for testing the basic connection to the Readwise MCP server. It includes buttons to test the status endpoint, tags endpoint, and advanced search endpoint.
+
+- **mcp-demo.html**: A more comprehensive demo that showcases the full range of Readwise MCP server functionality. It includes a user interface for:
+  - Browsing books and articles
+  - Viewing highlights
+  - Searching content
+  - Managing tags
+  - Tracking reading progress
+  - Performing bulk operations
+
+### Using the Demo Files
+
+1. Start the Readwise MCP server:
+   ```bash
+   npm run simple
+   ```
+
+2. Open one of the demo HTML files in your browser:
+   ```bash
+   open demo/test-connection.html
+   # or
+   open demo/mcp-demo.html
+   ```
+
+3. Enter your Readwise API token when prompted and explore the functionality.
+
+These demo files are useful for:
+- Testing your Readwise API token
+- Exploring the available endpoints
+- Understanding the data structure
+- Debugging issues with the server
+
 ## Troubleshooting
 
 ### Token Issues
