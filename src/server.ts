@@ -18,6 +18,9 @@ import { ReadwiseSearchPrompt } from './prompts/search-prompt';
 import { Logger } from './utils/logger';
 import { MCPRequest, MCPResponse, ErrorResponse, ErrorType, TransportType } from './types';
 import { ValidationResult, ValidationError } from './types/validation';
+import { GetTagsTool } from './tools/get-tags';
+import { DocumentTagsTool } from './tools/document-tags';
+import { BulkTagsTool } from './tools/bulk-tags';
 
 /**
  * Readwise MCP Server implementation
@@ -96,12 +99,18 @@ export class ReadwiseMCPServer {
     const getHighlightsTool = new GetHighlightsTool(this.api, this.logger);
     const getDocumentsTool = new GetDocumentsTool(this.api, this.logger);
     const searchHighlightsTool = new SearchHighlightsTool(this.api, this.logger);
+    const getTagsTool = new GetTagsTool(this.api, this.logger);
+    const documentTagsTool = new DocumentTagsTool(this.api, this.logger);
+    const bulkTagsTool = new BulkTagsTool(this.api, this.logger);
     
     // Register tools
     this.toolRegistry.register(getBooksTool);
     this.toolRegistry.register(getHighlightsTool);
     this.toolRegistry.register(getDocumentsTool);
     this.toolRegistry.register(searchHighlightsTool);
+    this.toolRegistry.register(getTagsTool);
+    this.toolRegistry.register(documentTagsTool);
+    this.toolRegistry.register(bulkTagsTool);
     
     this.logger.info(`Registered ${this.toolRegistry.getNames().length} tools`);
   }

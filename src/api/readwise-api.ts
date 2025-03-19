@@ -7,7 +7,11 @@ import {
   Highlight,
   Book,
   Document,
-  SearchResult
+  SearchResult,
+  TagResponse,
+  DocumentTagsResponse,
+  BulkTagRequest,
+  BulkTagResponse
 } from '../types';
 
 /**
@@ -129,5 +133,61 @@ export class ReadwiseAPI {
     const url = `/search?${queryParams.toString()}`;
     
     return this.client.get<SearchResult[]>(url);
+  }
+
+  /**
+   * Get all tags from Readwise
+   * @returns A promise resolving to a list of all tags
+   */
+  async getTags(): Promise<TagResponse> {
+    return this.client.get<TagResponse>('/tags');
+  }
+
+  /**
+   * Get tags for a specific document
+   * @param documentId - The ID of the document
+   * @returns A promise resolving to the document's tags
+   */
+  async getDocumentTags(documentId: string): Promise<DocumentTagsResponse> {
+    return this.client.get<DocumentTagsResponse>(`/document/${documentId}/tags`);
+  }
+
+  /**
+   * Update tags for a specific document
+   * @param documentId - The ID of the document
+   * @param tags - The new tags to set
+   * @returns A promise resolving to the updated document tags
+   */
+  async updateDocumentTags(documentId: string, tags: string[]): Promise<DocumentTagsResponse> {
+    return this.client.put<DocumentTagsResponse>(`/document/${documentId}/tags`, { tags });
+  }
+
+  /**
+   * Add a tag to a document
+   * @param documentId - The ID of the document
+   * @param tag - The tag to add
+   * @returns A promise resolving to the updated document tags
+   */
+  async addTagToDocument(documentId: string, tag: string): Promise<DocumentTagsResponse> {
+    return this.client.post<DocumentTagsResponse>(`/document/${documentId}/tags/${encodeURIComponent(tag)}`);
+  }
+
+  /**
+   * Remove a tag from a document
+   * @param documentId - The ID of the document
+   * @param tag - The tag to remove
+   * @returns A promise resolving to the updated document tags
+   */
+  async removeTagFromDocument(documentId: string, tag: string): Promise<DocumentTagsResponse> {
+    return this.client.delete<DocumentTagsResponse>(`/document/${documentId}/tags/${encodeURIComponent(tag)}`);
+  }
+
+  /**
+   * Add tags to multiple documents
+   * @param params - The bulk tag operation parameters
+   * @returns A promise resolving to the bulk operation results
+   */
+  async bulkTagDocuments(params: BulkTagRequest): Promise<BulkTagResponse> {
+    return this.client.post<BulkTagResponse>('/bulk/tag', params);
   }
 }

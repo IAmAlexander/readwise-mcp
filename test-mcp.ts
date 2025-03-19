@@ -1,160 +1,182 @@
-import axios, { AxiosResponse, AxiosError } from 'axios';
+import { spawn } from 'child_process';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import express from 'express';
+import cors from 'cors';
+import { ReadwiseAPI } from './src/api/readwise-api';
+import { ReadwiseClient } from './src/api/client';
+import { ToolRegistry } from './src/mcp/registry/tool-registry';
+import { PromptRegistry } from './src/mcp/registry/prompt-registry';
+import { getConfig } from './src/utils/config';
+import { SafeLogger, LogLevel } from './src/utils/safe-logger';
 
-// Configuration
-const SERVER_URL = 'http://localhost:3000';
-const AUTH_TOKEN = 'YOUR_READWISE_TOKEN'; // Replace with your actual token
+/**
+ * This script tests the Readwise MCP server by:
+ * 1. Starting the server with SSE transport
+ * 2. Testing each tool with sample parameters
+ * 3. Verifying the responses
+ */
 
-// Interfaces for response types
-interface StatusResponse {
-  status: string;
-  version: string;
-  timestamp: string;
-}
+async function main() {
+  // Create Express app
+  const app = express();
+  app.use(cors());
+  app.use(express.json());
 
-interface Tag {
-  id: number;
-  name: string;
-}
-
-interface TagsResponse {
-  count: number;
-  results: Tag[];
-}
-
-interface SearchResult {
-  id: number;
-  title: string;
-  author: string;
-  category: string;
-  source: string;
-  highlights_count: number;
-  updated: string;
-  cover_image_url: string;
-  tags: Tag[];
-  [key: string]: any; // For any additional properties
-}
-
-interface SearchResponse {
-  count: number;
-  results: SearchResult[];
-}
-
-interface ReadingProgressItem {
-  id: number;
-  title: string;
-  author: string;
-  status: string;
-  progress_percentage: number;
-  updated: string;
-  [key: string]: any; // For any additional properties
-}
-
-interface ReadingProgressResponse {
-  count: number;
-  results: ReadingProgressItem[];
-}
-
-// Test functions
-async function testStatus(): Promise<boolean> {
-  try {
-    console.log('Testing status endpoint...');
-    const response: AxiosResponse<StatusResponse> = await axios.get(`${SERVER_URL}/status`);
-    console.log('Status:', response.status);
-    console.log('Data:', JSON.stringify(response.data, null, 2));
-    return true;
-  } catch (error) {
-    const axiosError = error as AxiosError;
-    console.error('Error testing status:', axiosError.message);
-    if (axiosError.response) {
-      console.error('Response data:', axiosError.response.data);
-    }
-    return false;
-  }
-}
-
-async function testTags(): Promise<boolean> {
-  try {
-    console.log('\nTesting tags endpoint...');
-    const response: AxiosResponse<TagsResponse> = await axios.get(`${SERVER_URL}/tags`, {
-      headers: {
-        'Authorization': `Token ${AUTH_TOKEN}`
-      }
-    });
-    console.log('Status:', response.status);
-    console.log('Data:', JSON.stringify(response.data, null, 2));
-    return true;
-  } catch (error) {
-    const axiosError = error as AxiosError;
-    console.error('Error testing tags:', axiosError.message);
-    if (axiosError.response) {
-      console.error('Response data:', axiosError.response.data);
-    }
-    return false;
-  }
-}
-
-async function testAdvancedSearch(): Promise<boolean> {
-  try {
-    console.log('\nTesting advanced search endpoint...');
-    const response: AxiosResponse<SearchResponse> = await axios.get(`${SERVER_URL}/search/advanced?query=test`, {
-      headers: {
-        'Authorization': `Token ${AUTH_TOKEN}`
-      }
-    });
-    console.log('Status:', response.status);
-    console.log('Data (first 2 results):', JSON.stringify(response.data.results.slice(0, 2), null, 2));
-    console.log(`Total results: ${response.data.count}`);
-    return true;
-  } catch (error) {
-    const axiosError = error as AxiosError;
-    console.error('Error testing advanced search:', axiosError.message);
-    if (axiosError.response) {
-      console.error('Response data:', axiosError.response.data);
-    }
-    return false;
-  }
-}
-
-async function testReadingProgress(): Promise<boolean> {
-  try {
-    console.log('\nTesting reading progress endpoint...');
-    const response: AxiosResponse<ReadingProgressResponse> = await axios.get(`${SERVER_URL}/reading/progress?status=reading`, {
-      headers: {
-        'Authorization': `Token ${AUTH_TOKEN}`
-      }
-    });
-    console.log('Status:', response.status);
-    console.log('Data (first 2 results):', JSON.stringify(response.data.results.slice(0, 2), null, 2));
-    console.log(`Total results: ${response.data.count}`);
-    return true;
-  } catch (error) {
-    const axiosError = error as AxiosError;
-    console.error('Error testing reading progress:', axiosError.message);
-    if (axiosError.response) {
-      console.error('Response data:', axiosError.response.data);
-    }
-    return false;
-  }
-}
-
-// Run tests
-async function runTests(): Promise<void> {
-  console.log('=== READWISE MCP SERVER TESTS ===');
+  // Get configuration
+  const config = getConfig();
   
-  // Always test status (doesn't require auth)
-  await testStatus();
-  
-  // Only run authenticated tests if token is provided
-  if (AUTH_TOKEN !== 'YOUR_READWISE_TOKEN') {
-    await testTags();
-    await testAdvancedSearch();
-    await testReadingProgress();
-  } else {
-    console.log('\nSkipping authenticated tests. Replace YOUR_READWISE_TOKEN with your actual token to run all tests.');
+  // Force SSE transport for testing
+  config.transport = 'sse';
+
+  // Create logger
+  const logger = new SafeLogger(
+    'sse',
+    'readwise-mcp-test',
+    {
+      level: LogLevel.DEBUG,
+      showLevel: true,
+      timestamps: true
+    }
+  );
+
+  logger.info('Starting Readwise MCP Server Test...');
+
+  // Create the Readwise API client
+  const client = new ReadwiseClient({
+    apiKey: config.readwiseApiKey,
+    baseUrl: config.readwiseApiBaseUrl
+  });
+  const api = new ReadwiseAPI(client);
+
+  // Create the tool registry
+  const toolRegistry = new ToolRegistry(api);
+
+  // Create the prompt registry
+  const promptRegistry = new PromptRegistry(api);
+
+  // Setup MCP Server
+  const server = new McpServer({
+    name: "Readwise",
+    version: "1.0.0",
+    description: "Access your Readwise library, including articles, books, highlights, and documents."
+  });
+
+  // Register MCP functions
+  for (const tool of toolRegistry.getAllTools()) {
+    logger.debug(`Registering tool: ${tool.name}`);
+    
+    server.tool(
+      tool.name,
+      tool.parameters,
+      async (params: any) => {
+        try {
+          logger.debug(`Executing tool: ${tool.name}`, params);
+          
+          // Validate parameters if needed
+          if (tool.validate) {
+            const validationResult = tool.validate(params);
+            if (!validationResult.valid) {
+              logger.warn(`Validation failed for tool ${tool.name}: ${validationResult.error}`);
+              return {
+                content: [{ type: "text", text: validationResult.error || 'Invalid parameters' }],
+                isError: true
+              };
+            }
+          }
+          
+          const result = await tool.execute(params);
+          logger.debug(`Tool ${tool.name} executed successfully`);
+          return {
+            content: [{ type: "text", text: JSON.stringify(result) }]
+          };
+        } catch (error) {
+          logger.error(`Error executing tool ${tool.name}:`, error);
+          
+          // Convert error to MCP-compatible format
+          let errorMessage = "An unexpected error occurred";
+          
+          if (error instanceof Error) {
+            errorMessage = error.message;
+          }
+          
+          return {
+            content: [{ type: "text", text: errorMessage }],
+            isError: true
+          };
+        }
+      }
+    );
   }
-  
-  console.log('\n=== TESTS COMPLETED ===');
+
+  // Setup HTTP server
+  const port = config.port || 3000;
+  const httpServer = app.listen(port, () => {
+    logger.info(`Server listening on port ${port}`);
+  });
+
+  // Setup SSE endpoint
+  let sseTransport: SSEServerTransport | null = null;
+
+  app.get('/sse', async (req, res) => {
+    logger.info('SSE connection established');
+    sseTransport = new SSEServerTransport('/messages', res);
+    await server.connect(sseTransport);
+  });
+
+  app.post('/messages', async (req, res) => {
+    if (sseTransport) {
+      logger.debug('Received message', { body: req.body });
+      await sseTransport.handlePostMessage(req, res);
+    } else {
+      logger.warn('No active SSE connection');
+      res.status(400).json({ error: 'No active SSE connection' });
+    }
+  });
+
+  // Add status endpoint
+  app.get('/status', (req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      version: '1.0.0',
+      transport: 'sse',
+      tools: toolRegistry.getAllToolNames(),
+      prompts: promptRegistry.getAllPromptNames()
+    });
+  });
+
+  // Test the server with MCP Inspector
+  logger.info('Starting MCP Inspector...');
+  const inspectorProcess = spawn('npx', ['@modelcontextprotocol/inspector'], {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      MCP_SERVER_URL: `http://localhost:${port}/sse`
+    }
+  });
+
+  // Handle inspector process exit
+  inspectorProcess.on('exit', (code) => {
+    logger.info(`MCP Inspector exited with code ${code}`);
+    httpServer.close();
+    process.exit(0);
+  });
+
+  // Handle process termination
+  process.on('SIGINT', () => {
+    logger.info('Received SIGINT, shutting down...');
+    httpServer.close();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', () => {
+    logger.info('Received SIGTERM, shutting down...');
+    httpServer.close();
+    process.exit(0);
+  });
 }
 
-// Run the tests
-runTests(); 
+main().catch((error) => {
+  console.error('Error in test script:', error);
+  process.exit(1);
+}); 

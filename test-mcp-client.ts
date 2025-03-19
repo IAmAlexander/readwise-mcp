@@ -1,183 +1,119 @@
-import fs from 'fs';
-import path from 'path';
-import axios, { AxiosResponse, AxiosError } from 'axios';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { spawn } from 'child_process';
+import * as path from 'path';
+import * as fs from 'fs';
 
-// Configuration
-const SERVER_URL = 'http://localhost:3000';
-const MANIFEST_PATH = path.join(__dirname, 'mcp-manifest.json');
-const AUTH_TOKEN = 'YOUR_READWISE_TOKEN'; // Replace with your actual token
+/**
+ * This script tests the Readwise MCP client functionality by:
+ * 1. Starting the Readwise MCP server as a child process
+ * 2. Connecting to it using the MCP client
+ * 3. Testing various tool calls
+ */
 
-// Interfaces
-interface MCPManifest {
-  name: string;
-  name_for_human: string;
-  schema_version: string;
-  description_for_human: string;
-  description_for_model: string;
-  auth: {
-    type: string;
-    client_url: string;
-    scope: string;
-    authorization_url: string;
-    authorization_content_type: string;
-  };
-  api: {
-    type: string;
-    url: string;
-  };
-  logo_url: string;
-  contact_email: string;
-  legal_info_url: string;
-}
+async function main() {
+  console.log('Starting Readwise MCP client test...');
 
-interface OpenAPIPath {
-  [path: string]: {
-    [method: string]: {
-      operationId: string;
-      summary: string;
-      description: string;
-      parameters?: any[];
-      responses: {
-        [statusCode: string]: {
-          description: string;
-          content?: {
-            [contentType: string]: {
-              schema: {
-                type: string;
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-}
+  // Start the server process
+  console.log('Starting server process...');
+  const serverProcess = spawn('npm', ['run', 'start'], {
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
 
-interface OpenAPISpec {
-  openapi: string;
-  info: {
-    title: string;
-    description: string;
-    version: string;
-  };
-  servers: {
-    url: string;
-    description: string;
-  }[];
-  paths: OpenAPIPath;
-}
+  // Create a transport to the server
+  const transport = new StdioClientTransport({
+    command: 'npm',
+    args: ['run', 'start']
+  });
 
-interface StatusResponse {
-  status: string;
-  version: string;
-  timestamp: string;
-}
-
-interface Tag {
-  id: number;
-  name: string;
-}
-
-interface TagsResponse {
-  count: number;
-  results: Tag[];
-}
-
-// Read the manifest file
-const manifest: MCPManifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
-console.log('Loaded MCP manifest:', manifest.name_for_human);
-
-// Function to get the OpenAPI spec
-async function getOpenAPISpec(): Promise<OpenAPISpec | null> {
-  try {
-    console.log('Fetching OpenAPI spec...');
-    const response: AxiosResponse<OpenAPISpec> = await axios.get(`${SERVER_URL}/openapi.json`);
-    console.log('OpenAPI spec version:', response.data.info.version);
-    console.log('Available endpoints:');
-    
-    // Print all available endpoints
-    const paths = Object.keys(response.data.paths);
-    paths.forEach(path => {
-      const methods = Object.keys(response.data.paths[path]);
-      methods.forEach(method => {
-        console.log(`  ${method.toUpperCase()} ${path}`);
-      });
-    });
-    
-    return response.data;
-  } catch (error) {
-    const axiosError = error as AxiosError;
-    console.error('Error fetching OpenAPI spec:', axiosError.message);
-    if (axiosError.response) {
-      console.error('Response data:', axiosError.response.data);
+  // Create the client
+  const client = new Client(
+    {
+      name: 'readwise-mcp-test-client',
+      version: '1.0.0'
+    },
+    {
+      capabilities: {
+        tools: {}
+      }
     }
-    return null;
-  }
-}
+  );
 
-// Function to test the status endpoint
-async function testStatus(): Promise<boolean> {
-  try {
-    console.log('\nTesting status endpoint...');
-    const response: AxiosResponse<StatusResponse> = await axios.get(`${SERVER_URL}/status`);
-    console.log('Status:', response.status);
-    console.log('Data:', JSON.stringify(response.data, null, 2));
-    return true;
-  } catch (error) {
-    const axiosError = error as AxiosError;
-    console.error('Error testing status:', axiosError.message);
-    if (axiosError.response) {
-      console.error('Response data:', axiosError.response.data);
-    }
-    return false;
-  }
-}
+  // Connect to the server
+  console.log('Connecting to server...');
+  await client.connect(transport);
+  console.log('Connected to server successfully!');
 
-// Function to test the tags endpoint
-async function testTags(): Promise<boolean> {
   try {
-    console.log('\nTesting tags endpoint...');
-    const response: AxiosResponse<TagsResponse> = await axios.get(`${SERVER_URL}/tags`, {
-      headers: {
-        'Authorization': `Token ${AUTH_TOKEN}`
+    // Test tool calls
+    console.log('\n--- Testing tools ---');
+
+    // Test get_books tool
+    console.log('\nTesting get_books tool...');
+    const booksResult = await client.callTool({
+      name: 'get_books',
+      arguments: {
+        limit: 3
       }
     });
-    console.log('Status:', response.status);
-    console.log('Data:', JSON.stringify(response.data, null, 2));
-    return true;
-  } catch (error) {
-    const axiosError = error as AxiosError;
-    console.error('Error testing tags:', axiosError.message);
-    if (axiosError.response) {
-      console.error('Response data:', axiosError.response.data);
+    if (booksResult.content && booksResult.content[0] && booksResult.content[0].text) {
+      console.log('Books result:', JSON.parse(booksResult.content[0].text));
     }
-    return false;
+
+    // Test get_highlights tool
+    console.log('\nTesting get_highlights tool...');
+    const highlightsResult = await client.callTool({
+      name: 'get_highlights',
+      arguments: {
+        limit: 3
+      }
+    });
+    if (highlightsResult.content && highlightsResult.content[0] && highlightsResult.content[0].text) {
+      console.log('Highlights result:', JSON.parse(highlightsResult.content[0].text));
+    }
+
+    // Test search_highlights tool
+    console.log('\nTesting search_highlights tool...');
+    const searchResult = await client.callTool({
+      name: 'search_highlights',
+      arguments: {
+        query: 'programming',
+        limit: 3
+      }
+    });
+    if (searchResult.content && searchResult.content[0] && searchResult.content[0].text) {
+      console.log('Search result:', JSON.parse(searchResult.content[0].text));
+    }
+
+    // Test get_tags tool
+    console.log('\nTesting get_tags tool...');
+    const tagsResult = await client.callTool({
+      name: 'get_tags',
+      arguments: {}
+    });
+    if (tagsResult.content && tagsResult.content[0] && tagsResult.content[0].text) {
+      console.log('Tags result:', JSON.parse(tagsResult.content[0].text));
+    }
+
+    console.log('\nAll tests completed successfully!');
+  } catch (error) {
+    console.error('Error during test:', error);
+  } finally {
+    // Clean up
+    console.log('\nTest completed.');
+    
+    // Kill the server process if we started it
+    if (serverProcess) {
+      console.log('Terminating server process...');
+      serverProcess.kill();
+    }
+    
+    // Exit the process
+    process.exit(0);
   }
 }
 
-// Run tests
-async function runTests(): Promise<void> {
-  console.log('=== READWISE MCP CLIENT TESTS ===');
-  
-  // Get OpenAPI spec
-  const spec = await getOpenAPISpec();
-  if (!spec) {
-    console.error('Failed to fetch OpenAPI spec. Exiting...');
-    return;
-  }
-  
-  // Test status endpoint
-  await testStatus();
-  
-  // Only run authenticated tests if token is provided
-  if (AUTH_TOKEN !== 'YOUR_READWISE_TOKEN') {
-    await testTags();
-  } else {
-    console.log('\nSkipping authenticated tests. Replace YOUR_READWISE_TOKEN with your actual token to run all tests.');
-  }
-  
-  console.log('\n=== TESTS COMPLETED ===');
-}
-
-// Run the tests
-runTests(); 
+main().catch((error) => {
+  console.error('Error in test script:', error);
+  process.exit(1);
+}); 

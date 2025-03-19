@@ -132,6 +132,30 @@ export function validateAllowedValues<T>(
 }
 
 /**
+ * Validate that a field is an array
+ * @param params - Parameters to validate
+ * @param field - Field name to check
+ * @param message - Optional custom error message
+ * @returns ValidationResult indicating success or failure
+ */
+export function validateArray(
+  params: Record<string, any>,
+  field: string,
+  message?: string
+): ValidationResult {
+  // Skip validation if field is not present
+  if (params[field] === undefined || params[field] === null) {
+    return validationSuccess();
+  }
+  
+  if (!Array.isArray(params[field])) {
+    return validationError(field, message || `${field} must be an array`);
+  }
+  
+  return validationSuccess();
+}
+
+/**
  * Combine multiple validation results
  * @param results - Array of validation results
  * @returns Combined validation result

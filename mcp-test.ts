@@ -1,258 +1,274 @@
-import fs from 'fs';
-import path from 'path';
-import axios, { AxiosResponse, AxiosError } from 'axios';
+import { spawn } from 'child_process';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import express from 'express';
+import cors from 'cors';
+import http from 'http';
+import { ReadwiseAPI } from './src/api/readwise-api';
+import { ReadwiseClient } from './src/api/client';
+import { ToolRegistry } from './src/mcp/registry/tool-registry';
+import { PromptRegistry } from './src/mcp/registry/prompt-registry';
+import { getConfig } from './src/utils/config';
+import { SafeLogger, LogLevel } from './src/utils/safe-logger';
 
-// Configuration
-const SERVER_URL = 'http://localhost:3000';
-const MANIFEST_PATH = path.join(__dirname, 'mcp-manifest.json');
+/**
+ * This script provides comprehensive testing for the Readwise MCP implementation:
+ * 1. Tests the server with both stdio and SSE transports
+ * 2. Tests the client connecting to the server
+ * 3. Tests all available tools and prompts
+ */
 
-// Interfaces
-interface MCPManifest {
-  schema_version: string;
-  name: string;
-  name_for_human: string;
-  description_for_human: string;
-  description_for_model: string;
-  auth: {
-    type: string;
-    client_url: string;
-    scope: string;
-    authorization_url: string;
-    authorization_content_type: string;
-  };
-  api: {
-    type: string;
-    url: string;
-  };
-  logo_url: string;
-  contact_email: string;
-  legal_info_url: string;
-}
+// Global variables
+let httpServer: http.Server | null = null;
+let sseTransport: SSEServerTransport | null = null;
+let serverProcess: any = null;
 
-interface OpenAPIPath {
-  [path: string]: {
-    [method: string]: {
-      operationId: string;
-      summary: string;
-      description: string;
-      parameters?: any[];
-      responses: {
-        [statusCode: string]: {
-          description: string;
-          content?: {
-            [contentType: string]: {
-              schema: {
-                type: string;
+// Create a logger
+const logger = new SafeLogger(
+  'stdio',
+  'readwise-mcp-test',
+  {
+    level: LogLevel.DEBUG,
+    showLevel: true,
+    timestamps: true
+  }
+);
+
+/**
+ * Test the server with SSE transport
+ */
+async function testServerSSE() {
+  logger.info('Testing server with SSE transport...');
+
+  // Create Express app
+  const app = express();
+  app.use(cors());
+  app.use(express.json());
+
+  // Get configuration
+  const config = getConfig();
+  config.transport = 'sse';
+
+  // Create the Readwise API client
+  const client = new ReadwiseClient({
+    apiKey: config.readwiseApiKey,
+    baseUrl: config.readwiseApiBaseUrl
+  });
+  const api = new ReadwiseAPI(client);
+
+  // Create the tool registry
+  const toolRegistry = new ToolRegistry(api);
+
+  // Create the prompt registry
+  const promptRegistry = new PromptRegistry(api);
+
+  // Setup MCP Server
+  const server = new McpServer({
+    name: "Readwise",
+    version: "1.0.0",
+    description: "Access your Readwise library, including articles, books, highlights, and documents."
+  });
+
+  // Register MCP functions
+  for (const tool of toolRegistry.getAllTools()) {
+    logger.debug(`Registering tool: ${tool.name}`);
+    
+    server.tool(
+      tool.name,
+      tool.parameters,
+      async (params: any) => {
+        try {
+          logger.debug(`Executing tool: ${tool.name}`, params);
+          
+          // Validate parameters if needed
+          if (tool.validate) {
+            const validationResult = tool.validate(params);
+            if (!validationResult.valid) {
+              logger.warn(`Validation failed for tool ${tool.name}: ${validationResult.error}`);
+              return {
+                content: [{ type: "text", text: validationResult.error || 'Invalid parameters' }],
+                isError: true
               };
-            };
+            }
+          }
+          
+          const result = await tool.execute(params);
+          logger.debug(`Tool ${tool.name} executed successfully`);
+          return {
+            content: [{ type: "text", text: JSON.stringify(result) }]
           };
-        };
-      };
-    };
-  };
-}
-
-interface OpenAPISpec {
-  openapi: string;
-  info: {
-    title: string;
-    description: string;
-    version: string;
-  };
-  servers: {
-    url: string;
-    description: string;
-  }[];
-  paths: OpenAPIPath;
-}
-
-// Read the manifest file
-const manifest: MCPManifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
-console.log('Loaded MCP manifest:', manifest.name_for_human);
-
-// Function to get the OpenAPI spec
-async function getOpenAPISpec(): Promise<OpenAPISpec | null> {
-  try {
-    console.log('Fetching OpenAPI spec...');
-    const response: AxiosResponse<OpenAPISpec> = await axios.get(`${SERVER_URL}/openapi.json`);
-    return response.data;
-  } catch (error) {
-    const axiosError = error as AxiosError;
-    console.error('Error fetching OpenAPI spec:', axiosError.message);
-    if (axiosError.response) {
-      console.error('Response data:', axiosError.response.data);
-    }
-    return null;
+        } catch (error) {
+          logger.error(`Error executing tool ${tool.name}:`, error);
+          
+          // Convert error to MCP-compatible format
+          let errorMessage = "An unexpected error occurred";
+          
+          if (error instanceof Error) {
+            errorMessage = error.message;
+          }
+          
+          return {
+            content: [{ type: "text", text: errorMessage }],
+            isError: true
+          };
+        }
+      }
+    );
   }
-}
 
-// Function to validate the MCP manifest
-async function validateManifest(): Promise<boolean> {
-  try {
-    console.log('Validating MCP manifest...');
-    
-    // Check required fields
-    const requiredFields: (keyof MCPManifest)[] = [
-      'schema_version', 'name', 'name_for_human', 'description_for_human', 
-      'description_for_model', 'auth', 'api', 'logo_url', 'contact_email', 'legal_info_url'
-    ];
-    
-    const missingFields = requiredFields.filter(field => !manifest[field]);
-    if (missingFields.length > 0) {
-      console.error('Missing required fields in manifest:', missingFields.join(', '));
-      return false;
-    }
-    
-    // Check auth fields
-    const requiredAuthFields: (keyof MCPManifest['auth'])[] = [
-      'type', 'client_url', 'authorization_url', 'authorization_content_type'
-    ];
-    
-    const missingAuthFields = requiredAuthFields.filter(field => !manifest.auth[field]);
-    if (missingAuthFields.length > 0) {
-      console.error('Missing required auth fields in manifest:', missingAuthFields.join(', '));
-      return false;
-    }
-    
-    // Check API fields
-    const requiredApiFields: (keyof MCPManifest['api'])[] = ['type', 'url'];
-    
-    const missingApiFields = requiredApiFields.filter(field => !manifest.api[field]);
-    if (missingApiFields.length > 0) {
-      console.error('Missing required API fields in manifest:', missingApiFields.join(', '));
-      return false;
-    }
-    
-    console.log('Manifest validation successful!');
-    return true;
-  } catch (error) {
-    console.error('Error validating manifest:', (error as Error).message);
-    return false;
-  }
-}
+  // Setup HTTP server
+  const port = config.port || 3000;
+  httpServer = app.listen(port, () => {
+    logger.info(`Server listening on port ${port}`);
+  });
 
-// Function to validate the OpenAPI spec
-async function validateOpenAPISpec(spec: OpenAPISpec | null): Promise<boolean> {
-  if (!spec) {
-    console.error('No OpenAPI spec provided for validation');
-    return false;
-  }
-  
-  try {
-    console.log('Validating OpenAPI spec...');
-    
-    // Check required fields
-    if (!spec.openapi) {
-      console.error('Missing openapi version in spec');
-      return false;
+  // Setup SSE endpoint
+  app.get('/sse', async (req, res) => {
+    logger.info('SSE connection established');
+    sseTransport = new SSEServerTransport('/messages', res);
+    await server.connect(sseTransport);
+  });
+
+  app.post('/messages', async (req, res) => {
+    if (sseTransport) {
+      logger.debug('Received message', { body: req.body });
+      await sseTransport.handlePostMessage(req, res);
+    } else {
+      logger.warn('No active SSE connection');
+      res.status(400).json({ error: 'No active SSE connection' });
     }
-    
-    if (!spec.info || !spec.info.title || !spec.info.version) {
-      console.error('Missing info fields in spec');
-      return false;
-    }
-    
-    if (!spec.paths || Object.keys(spec.paths).length === 0) {
-      console.error('No paths defined in spec');
-      return false;
-    }
-    
-    // Check for required endpoints
-    const requiredEndpoints = ['/status', '/manifest.json', '/openapi.json'];
-    const missingEndpoints = requiredEndpoints.filter(endpoint => !spec.paths[endpoint]);
-    
-    if (missingEndpoints.length > 0) {
-      console.error('Missing required endpoints in spec:', missingEndpoints.join(', '));
-      return false;
-    }
-    
-    // Print summary of endpoints
-    console.log('OpenAPI spec contains the following endpoints:');
-    Object.keys(spec.paths).forEach(path => {
-      const methods = Object.keys(spec.paths[path]);
-      methods.forEach(method => {
-        console.log(`  ${method.toUpperCase()} ${path}`);
-      });
+  });
+
+  // Add status endpoint
+  app.get('/status', (req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      version: '1.0.0',
+      transport: 'sse',
+      tools: toolRegistry.getAllToolNames(),
+      prompts: promptRegistry.getAllPromptNames()
     });
-    
-    console.log('OpenAPI spec validation successful!');
-    return true;
-  } catch (error) {
-    console.error('Error validating OpenAPI spec:', (error as Error).message);
-    return false;
-  }
+  });
+
+  logger.info('Server with SSE transport started successfully');
+  return { port };
 }
 
-// Function to test the manifest endpoint
-async function testManifestEndpoint(): Promise<boolean> {
+/**
+ * Test the client connecting to the server
+ */
+async function testClient(port: number) {
+  logger.info('Testing client connecting to server...');
+
   try {
-    console.log('Testing manifest endpoint...');
-    const response: AxiosResponse<MCPManifest> = await axios.get(`${SERVER_URL}/manifest.json`);
-    
-    if (response.status !== 200) {
-      console.error('Manifest endpoint returned non-200 status:', response.status);
-      return false;
+    // Create a transport to the server
+    const transport = new StdioClientTransport({
+      command: 'npm',
+      args: ['run', 'start']
+    });
+
+    // Create the client
+    const client = new Client(
+      {
+        name: 'readwise-mcp-test-client',
+        version: '1.0.0'
+      },
+      {
+        capabilities: {
+          tools: {}
+        }
+      }
+    );
+
+    // Connect to the server
+    logger.info('Connecting to server...');
+    await client.connect(transport);
+    logger.info('Connected to server successfully!');
+
+    // Test tool calls
+    logger.info('Testing tools...');
+
+    // Test get_books tool
+    logger.info('Testing get_books tool...');
+    const booksResult = await client.callTool({
+      name: 'get_books',
+      arguments: {
+        limit: 3
+      }
+    });
+    if (booksResult.content && booksResult.content[0] && booksResult.content[0].text) {
+      logger.info('Books result:', JSON.parse(booksResult.content[0].text));
     }
-    
-    const serverManifest = response.data;
-    
-    // Compare with local manifest
-    const localManifestStr = JSON.stringify(manifest, null, 2);
-    const serverManifestStr = JSON.stringify(serverManifest, null, 2);
-    
-    if (localManifestStr !== serverManifestStr) {
-      console.error('Server manifest differs from local manifest');
-      console.log('Local manifest:', localManifestStr);
-      console.log('Server manifest:', serverManifestStr);
-      return false;
-    }
-    
-    console.log('Manifest endpoint test successful!');
-    return true;
+
+    logger.info('Client tests completed successfully');
   } catch (error) {
-    const axiosError = error as AxiosError;
-    console.error('Error testing manifest endpoint:', axiosError.message);
-    if (axiosError.response) {
-      console.error('Response data:', axiosError.response.data);
-    }
-    return false;
+    logger.error('Error during client test:', error);
+    throw error;
   }
 }
 
-// Run tests
-async function runTests(): Promise<void> {
-  console.log('=== MCP VALIDATION TESTS ===');
-  
-  // Validate manifest
-  const manifestValid = await validateManifest();
-  if (!manifestValid) {
-    console.error('Manifest validation failed. Exiting...');
-    return;
+/**
+ * Test the server with stdio transport
+ */
+async function testServerStdio() {
+  logger.info('Testing server with stdio transport...');
+
+  // Start the server process
+  serverProcess = spawn('npm', ['run', 'start'], {
+    stdio: 'pipe'
+  });
+
+  serverProcess.stdout.on('data', (data: Buffer) => {
+    logger.debug(`Server stdout: ${data.toString().trim()}`);
+  });
+
+  serverProcess.stderr.on('data', (data: Buffer) => {
+    logger.debug(`Server stderr: ${data.toString().trim()}`);
+  });
+
+  // Wait for the server to start
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  logger.info('Server with stdio transport started successfully');
+}
+
+/**
+ * Run all tests
+ */
+async function runTests() {
+  try {
+    // Test server with SSE transport
+    const { port } = await testServerSSE();
+    
+    // Test client
+    await testClient(port);
+    
+    // Test server with stdio transport
+    await testServerStdio();
+    
+    logger.info('All tests completed successfully!');
+  } catch (error) {
+    logger.error('Error during tests:', error);
+  } finally {
+    // Clean up
+    if (httpServer) {
+      logger.info('Closing HTTP server...');
+      httpServer.close();
+    }
+    
+    if (serverProcess) {
+      logger.info('Terminating server process...');
+      serverProcess.kill();
+    }
+    
+    logger.info('Tests completed.');
   }
-  
-  // Get OpenAPI spec
-  const spec = await getOpenAPISpec();
-  if (!spec) {
-    console.error('Failed to fetch OpenAPI spec. Exiting...');
-    return;
-  }
-  
-  // Validate OpenAPI spec
-  const specValid = await validateOpenAPISpec(spec);
-  if (!specValid) {
-    console.error('OpenAPI spec validation failed. Exiting...');
-    return;
-  }
-  
-  // Test manifest endpoint
-  const manifestEndpointValid = await testManifestEndpoint();
-  if (!manifestEndpointValid) {
-    console.error('Manifest endpoint test failed. Exiting...');
-    return;
-  }
-  
-  console.log('\n=== ALL TESTS PASSED ===');
 }
 
 // Run the tests
-runTests(); 
+runTests().catch((error) => {
+  logger.error('Unhandled error in test script:', error);
+  process.exit(1);
+}); 

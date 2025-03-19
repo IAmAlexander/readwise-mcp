@@ -196,4 +196,37 @@ export interface HealthCheckResponse {
 /**
  * MCP error response types
  */
-export type ErrorType = 'validation' | 'execution' | 'transport' | 'unknown'; 
+export type ErrorType = 'validation' | 'execution' | 'transport' | 'unknown';
+
+/**
+ * Tag-related types
+ */
+export interface TagResponse {
+  count: number;
+  tags: string[];
+}
+
+export interface DocumentTagsResponse {
+  document_id: string;
+  tags: string[];
+}
+
+export interface UpdateTagsRequest {
+  tags: string[];
+}
+
+export interface BulkTagRequest {
+  document_ids: string[];
+  tags: string[];
+  replace_existing?: boolean;
+  confirmation: string;
+}
+
+export interface BulkTagResponse {
+  success: boolean;
+  updated_documents: number;
+  errors?: Array<{
+    document_id: string;
+    error: string;
+  }>;
+} 
