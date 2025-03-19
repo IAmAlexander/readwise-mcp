@@ -47,3 +47,6 @@ coverage/
 
 # Yarn Integrity file
 .yarn-integrity
+
+# Project development guides
+Project Guide/
