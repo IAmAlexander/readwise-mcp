@@ -1,0 +1,47 @@
+service: readwise-mcp
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  memorySize: 256
+  timeout: 30
+  environment:
+    NODE_ENV: ${opt:stage, 'dev'}
+
+functions:
+  api:
+    handler: dist/lambda.lambdaHandler
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: any
+    environment:
+      READWISE_API_KEY: ${env:READWISE_API_KEY, ''}
+      READWISE_API_BASE_URL: ${env:READWISE_API_BASE_URL, 'https://readwise.io/api/v2'}
+      DEBUG: ${env:DEBUG, 'false'}
+
+plugins:
+  - serverless-offline
+  - serverless-dotenv-plugin
+
+custom:
+  serverless-offline:
+    httpPort: 3000
+    noPrependStageInUrl: true
+
+package:
+  patterns:
+    - '!node_modules/.cache/**'
+    - '!.git/**'
+    - '!.github/**'
+    - '!.vscode/**'
+    - '!tests/**'
+    - '!src/**'
+    - 'dist/**'
+    - 'package.json'
+    - 'package-lock.json'
+    - 'README.md' 

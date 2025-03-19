@@ -1,0 +1,7 @@
+{
+  "readwiseApiKey": "YOUR_API_KEY_HERE",
+  "readwiseApiBaseUrl": "https://readwise.io/api/v2",
+  "port": 3000,
+  "transport": "stdio",
+  "debug": false
+} 
