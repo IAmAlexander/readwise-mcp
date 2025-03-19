@@ -39,7 +39,8 @@
         "test-server": "node scripts/test-server.js",
         "protocol-check": "node scripts/protocol-check.js",
         "public": "ts-node src/index.ts --transport sse --port 3000",
-        "clean": "rimraf dist"
+        "clean": "rimraf dist",
+        "test-mock": "ts-node test-mock-mcp.ts"
     },
     "keywords": [
         "readwise",

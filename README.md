@@ -25,6 +25,7 @@ npm install -g readwise-mcp
 git clone https://github.com/your-username/readwise-mcp.git
 cd readwise-mcp
 npm install
+npm run build
 ```
 
 ## Setup
@@ -84,6 +85,26 @@ npm run test-inspector
 ```
 
 This will start the server in SSE mode and provide instructions for connecting with the MCP Inspector.
+
+## Testing Without a Readwise API Key
+
+If you don't have a Readwise API key or don't want to use your real API key for testing, you can use the mock testing functionality:
+
+```bash
+npm run test-mock
+```
+
+This runs a test script that:
+
+1. Creates a mock implementation of the Readwise API
+2. Sets up the MCP server with this mock API
+3. Tests various endpoints with sample data
+4. Verifies server functionality without requiring a real API key
+
+The mock implementation includes:
+- Sample books, highlights, and documents
+- Simulated network delays for realistic testing
+- Error handling testing
 
 ## Available Tools
 
