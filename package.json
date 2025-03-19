@@ -1,13 +1,19 @@
 {
     "name": "readwise-mcp",
     "version": "1.0.0",
-    "description": "MCP Server for Readwise using TypeScript",
+    "description": "Readwise MCP integration",
+    "main": "dist/index.js",
+    "bin": {
+        "readwise-mcp": "dist/index.js"
+    },
     "scripts": {
         "build": "tsc",
-        "start": "node --no-warnings dist/index.js",
+        "start": "node dist/index.js",
         "dev": "ts-node src/index.ts",
+        "dev:watch": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/index.ts",
         "simple": "ts-node src/simple-server.ts",
-        "lint": "eslint src --ext .ts",
+        "lint": "eslint \"src/**/*.ts\"",
+        "lint:fix": "eslint src/**/*.ts --fix",
         "test": "jest",
         "test:watch": "jest --watch",
         "test:coverage": "jest --coverage",
@@ -17,41 +23,78 @@
         "test:progress": "jest reading-progress",
         "test:delete": "jest delete-confirmation",
         "run-inspector": "ts-node run-inspector.ts",
+        "setup": "ts-node src/index.ts --setup",
+        "test-inspector": "ts-node run-inspector.ts",
         "test-mcp": "ts-node test-mcp.ts",
         "test-mcp-client": "ts-node test-mcp-client.ts",
-        "mcp-test": "ts-node mcp-test.ts"
+        "mcp-test": "ts-node mcp-test.ts",
+        "cli": "ts-node bin/cli.ts",
+        "vercel-build": "tsc",
+        "deploy": "vercel",
+        "deploy:prod": "vercel --prod",
+        "dev:serverless": "ts-node src/serverless.ts",
+        "sls:deploy": "serverless deploy",
+        "sls:deploy:prod": "serverless deploy --stage prod",
+        "sls:offline": "serverless offline",
+        "test-server": "node scripts/test-server.js",
+        "protocol-check": "node scripts/protocol-check.js",
+        "public": "ts-node src/index.ts --transport sse --port 3000",
+        "clean": "rimraf dist"
     },
     "keywords": [
-        "mcp",
         "readwise",
-        "claude",
-        "smithery",
-        "typescript"
+        "mcp",
+        "api"
     ],
-    "author": "IAmAlexander",
+    "author": "",
     "license": "MIT",
     "dependencies": {
-        "@modelcontextprotocol/sdk": "^1.5.0",
         "axios": "^1.6.2",
+        "body-parser": "^1.20.2",
         "cors": "^2.8.5",
-        "express": "^4.18.2"
+        "express": "^4.18.2",
+        "sse": "^0.0.8",
+        "yargs": "^17.7.2",
+        "chalk": "^4.1.2"
     },
     "devDependencies": {
+        "@types/body-parser": "^1.19.5",
         "@types/cors": "^2.8.17",
         "@types/express": "^4.17.21",
-        "@types/jest": "^29.5.12",
-        "@types/node": "^20.10.0",
-        "@types/supertest": "^6.0.2",
-        "@typescript-eslint/eslint-plugin": "^6.12.0",
-        "@typescript-eslint/parser": "^6.12.0",
-        "eslint": "^8.54.0",
+        "@types/jest": "^29.5.11",
+        "@types/node": "^20.10.4",
+        "@types/yargs": "^17.0.32",
+        "@typescript-eslint/eslint-plugin": "^6.13.2",
+        "@typescript-eslint/parser": "^6.13.2",
+        "eslint": "^8.55.0",
         "jest": "^29.7.0",
+        "nodemon": "^3.0.3",
+        "serverless": "^3.38.0",
+        "serverless-dotenv-plugin": "^6.0.0",
+        "serverless-offline": "^13.3.2",
         "supertest": "^6.3.4",
-        "ts-jest": "^29.1.2",
-        "ts-node": "^10.9.1",
-        "typescript": "^5.3.2"
+        "ts-jest": "^29.1.1",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.3.3"
     },
     "engines": {
         "node": ">=16.0.0 <20.0.0"
-    }
+    },
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
+    "directories": {
+        "test": "tests"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/IAmAlexander/readwise-mcp.git"
+    },
+    "bugs": {
+        "url": "https://github.com/IAmAlexander/readwise-mcp/issues"
+    },
+    "homepage": "https://github.com/IAmAlexander/readwise-mcp#readme"
 }
