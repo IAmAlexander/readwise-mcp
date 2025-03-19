@@ -71,6 +71,13 @@ export interface Document {
   created_at: string;
   updated_at: string;
   highlights_count?: number;
+  user_metadata?: {
+    reading_status?: 'not_started' | 'in_progress' | 'completed';
+    reading_percentage?: number;
+    current_page?: number;
+    total_pages?: number;
+    last_read_at?: string;
+  };
 }
 
 // MCP message types
@@ -229,4 +236,131 @@ export interface BulkTagResponse {
     document_id: string;
     error: string;
   }>;
+}
+
+export interface ReadingProgress {
+  document_id: string;
+  title: string;
+  status: 'not_started' | 'in_progress' | 'completed';
+  percentage: number;
+  current_page?: number;
+  total_pages?: number;
+  last_read_at?: string;
+}
+
+export interface GetReadingProgressParams {
+  document_id: string;
+}
+
+export interface UpdateReadingProgressParams {
+  document_id: string;
+  status: 'not_started' | 'in_progress' | 'completed';
+  percentage?: number;
+  current_page?: number;
+  total_pages?: number;
+  last_read_at?: string;
+}
+
+export interface GetReadingListParams {
+  status?: 'not_started' | 'in_progress' | 'completed';
+  category?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export interface ReadingListResponse {
+  count: number;
+  next?: string;
+  previous?: string;
+  results: Array<Document & { reading_progress: ReadingProgress }>;
+}
+
+/**
+ * Content management types
+ */
+export interface CreateHighlightParams {
+  text: string;
+  book_id: string;
+  note?: string;
+  location?: number;
+  location_type?: string;
+  color?: string;
+  tags?: string[];
+}
+
+export interface UpdateHighlightParams {
+  highlight_id: string;
+  text?: string;
+  note?: string;
+  location?: number;
+  location_type?: string;
+  color?: string;
+  tags?: string[];
+}
+
+export interface DeleteHighlightParams {
+  highlight_id: string;
+  confirmation: string;
+}
+
+export interface CreateNoteParams {
+  highlight_id: string;
+  note: string;
+}
+
+export interface UpdateNoteParams {
+  highlight_id: string;
+  note: string;
+}
+
+export interface DeleteNoteParams {
+  highlight_id: string;
+  confirmation: string;
+}
+
+/**
+ * Advanced search types
+ */
+export interface AdvancedSearchParams {
+  query?: string;
+  book_ids?: string[];
+  tags?: string[];
+  categories?: string[];
+  date_range?: {
+    start?: string;
+    end?: string;
+  };
+  location_range?: {
+    start?: number;
+    end?: number;
+  };
+  has_note?: boolean;
+  sort_by?: 'created_at' | 'updated_at' | 'highlighted_at' | 'location';
+  sort_order?: 'asc' | 'desc';
+  page?: number;
+  page_size?: number;
+}
+
+export interface SearchByTagParams {
+  tags: string[];
+  match_all?: boolean;
+  page?: number;
+  page_size?: number;
+}
+
+export interface SearchByDateParams {
+  start_date?: string;
+  end_date?: string;
+  date_field?: 'created_at' | 'updated_at' | 'highlighted_at';
+  page?: number;
+  page_size?: number;
+}
+
+export interface AdvancedSearchResult {
+  highlights: PaginatedResponse<Highlight>;
+  facets?: {
+    tags?: Array<{ tag: string; count: number }>;
+    categories?: Array<{ category: string; count: number }>;
+    books?: Array<{ book_id: string; title: string; count: number }>;
+  };
 } 

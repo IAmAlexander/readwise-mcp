@@ -21,6 +21,16 @@ import { ValidationResult, ValidationError } from './types/validation';
 import { GetTagsTool } from './tools/get-tags';
 import { DocumentTagsTool } from './tools/document-tags';
 import { BulkTagsTool } from './tools/bulk-tags';
+import { GetReadingProgressTool } from './tools/get-reading-progress';
+import { UpdateReadingProgressTool } from './tools/update-reading-progress';
+import { GetReadingListTool } from './tools/get-reading-list';
+import { CreateHighlightTool } from './tools/create-highlight';
+import { UpdateHighlightTool } from './tools/update-highlight';
+import { DeleteHighlightTool } from './tools/delete-highlight';
+import { CreateNoteTool } from './tools/create-note';
+import { AdvancedSearchTool } from './tools/advanced-search';
+import { SearchByTagTool } from './tools/search-by-tag';
+import { SearchByDateTool } from './tools/search-by-date';
 
 /**
  * Readwise MCP Server implementation
@@ -94,24 +104,44 @@ export class ReadwiseMCPServer {
   private registerTools(): void {
     this.logger.debug('Registering tools');
     
-    // Create tools
-    const getBooksTool = new GetBooksTool(this.api, this.logger);
+    // Create tool instances
     const getHighlightsTool = new GetHighlightsTool(this.api, this.logger);
+    const getBooksTool = new GetBooksTool(this.api, this.logger);
     const getDocumentsTool = new GetDocumentsTool(this.api, this.logger);
     const searchHighlightsTool = new SearchHighlightsTool(this.api, this.logger);
     const getTagsTool = new GetTagsTool(this.api, this.logger);
     const documentTagsTool = new DocumentTagsTool(this.api, this.logger);
     const bulkTagsTool = new BulkTagsTool(this.api, this.logger);
-    
+    const getReadingProgressTool = new GetReadingProgressTool(this.api, this.logger);
+    const updateReadingProgressTool = new UpdateReadingProgressTool(this.api, this.logger);
+    const getReadingListTool = new GetReadingListTool(this.api, this.logger);
+    const createHighlightTool = new CreateHighlightTool(this.api, this.logger);
+    const updateHighlightTool = new UpdateHighlightTool(this.api, this.logger);
+    const deleteHighlightTool = new DeleteHighlightTool(this.api, this.logger);
+    const createNoteTool = new CreateNoteTool(this.api, this.logger);
+    const advancedSearchTool = new AdvancedSearchTool(this.api, this.logger);
+    const searchByTagTool = new SearchByTagTool(this.api, this.logger);
+    const searchByDateTool = new SearchByDateTool(this.api, this.logger);
+
     // Register tools
-    this.toolRegistry.register(getBooksTool);
     this.toolRegistry.register(getHighlightsTool);
+    this.toolRegistry.register(getBooksTool);
     this.toolRegistry.register(getDocumentsTool);
     this.toolRegistry.register(searchHighlightsTool);
     this.toolRegistry.register(getTagsTool);
     this.toolRegistry.register(documentTagsTool);
     this.toolRegistry.register(bulkTagsTool);
-    
+    this.toolRegistry.register(getReadingProgressTool);
+    this.toolRegistry.register(updateReadingProgressTool);
+    this.toolRegistry.register(getReadingListTool);
+    this.toolRegistry.register(createHighlightTool);
+    this.toolRegistry.register(updateHighlightTool);
+    this.toolRegistry.register(deleteHighlightTool);
+    this.toolRegistry.register(createNoteTool);
+    this.toolRegistry.register(advancedSearchTool);
+    this.toolRegistry.register(searchByTagTool);
+    this.toolRegistry.register(searchByDateTool);
+
     this.logger.info(`Registered ${this.toolRegistry.getNames().length} tools`);
   }
   
