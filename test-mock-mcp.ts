@@ -97,6 +97,135 @@ server.handleMCPRequest = function(request, callback) {
       });
       return;
     }
+  } else if (request.type === 'prompt_call') {
+    if (request.name === 'readwise_highlight') {
+      // Get the book_id from params (or use default)
+      const bookId = request.parameters.book_id || 'book-1';
+      const task = request.parameters.task || 'analyze';
+      
+      // Get highlights for this book
+      mockAPI.getHighlights({ book_id: bookId }).then(highlightsResponse => {
+        // Get book details
+        mockAPI.getBook(bookId).then(book => {
+          if (!book) {
+            throw new Error(`Book not found: ${bookId}`);
+          }
+          
+          // Format highlights in a readable way
+          const highlights = highlightsResponse.results.map(h => 
+            `"${h.text}"${h.note ? ` — Note: ${h.note}` : ''}`
+          ).join('\n\n');
+          
+          // Build message based on task
+          let messageContent = '';
+          switch (task) {
+            case 'summarize':
+              messageContent = `Here are some highlights from "${book.title}" by ${book.author || 'Unknown'}:\n\n${highlights}\n\nPlease provide a concise summary of these highlights.`;
+              break;
+            case 'analyze':
+              messageContent = `Here are some highlights from "${book.title}" by ${book.author || 'Unknown'}:\n\n${highlights}\n\nPlease analyze these highlights and provide key insights.`;
+              break;
+            case 'connect':
+              messageContent = `Here are some highlights from "${book.title}" by ${book.author || 'Unknown'}:\n\n${highlights}\n\nPlease identify connections between these highlights and suggest related topics to explore.`;
+              break;
+            case 'question':
+              messageContent = `Here are some highlights from "${book.title}" by ${book.author || 'Unknown'}:\n\n${highlights}\n\nPlease generate thoughtful questions based on these highlights to deepen understanding.`;
+              break;
+            default:
+              messageContent = `Here are some highlights from "${book.title}" by ${book.author || 'Unknown'}:\n\n${highlights}`;
+          }
+          
+          // Include custom context if provided
+          if (request.parameters.context) {
+            messageContent = `${request.parameters.context}\n\n${messageContent}`;
+          }
+          
+          callback({
+            result: {
+              messages: [
+                {
+                  role: 'user',
+                  content: {
+                    type: 'text',
+                    text: messageContent
+                  }
+                }
+              ]
+            },
+            request_id: request.request_id
+          });
+        }).catch(error => {
+          callback({
+            error: {
+              type: 'transport',
+              details: {
+                code: 'execution_error',
+                message: error.message
+              }
+            },
+            request_id: request.request_id
+          });
+        });
+      }).catch(error => {
+        callback({
+          error: {
+            type: 'transport',
+            details: {
+              code: 'execution_error',
+              message: error.message
+            }
+          },
+          request_id: request.request_id
+        });
+      });
+      return;
+    } else if (request.name === 'readwise_search') {
+      // Get search query and parameters
+      const query = request.parameters.query || '';
+      
+      // Search highlights
+      mockAPI.searchHighlights({ query }).then(searchResults => {
+        if (searchResults.length === 0) {
+          throw new Error(`No results found for query: ${query}`);
+        }
+        
+        // Format results in a readable way
+        const formattedResults = searchResults.map((result, index) => {
+          const { highlight, book } = result;
+          return `${index + 1}. "${highlight.text}" — ${book.title}${book.author ? ` by ${book.author}` : ''}`;
+        }).join('\n\n');
+        
+        // Build message content
+        const messageContent = `Here are the search results for "${query}":\n\n${formattedResults}\n\nPlease analyze these results and provide insights related to your search.`;
+        
+        callback({
+          result: {
+            messages: [
+              {
+                role: 'user',
+                content: {
+                  type: 'text',
+                  text: messageContent
+                }
+              }
+            ]
+          },
+          request_id: request.request_id
+        });
+      }).catch(error => {
+        callback({
+          error: {
+            type: 'transport',
+            details: {
+              code: 'execution_error',
+              message: error.message
+            }
+          },
+          request_id: request.request_id
+        });
+      });
+      return;
+    }
   }
   
   // Pass through to original for validation and error cases
@@ -154,7 +283,7 @@ function runTests(): void {
   sendRequest({
     type: 'prompt_call',
     name: 'readwise_search',
-    parameters: { query: 'AI' },
+    parameters: { query: 'code' },
     request_id: 'test-5'
   });
   
