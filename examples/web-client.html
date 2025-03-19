@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Readwise MCP Web Client</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      color: #2c3e50;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 20px;
+      background-color: #f9f9f9;
+    }
+    .highlight {
+      background-color: #fffde7;
+      border-left: 3px solid #fdd835;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    .response {
+      white-space: pre-wrap;
+      font-family: monospace;
+      background-color: #f5f5f5;
+      padding: 15px;
+      overflow-x: auto;
+      border-radius: 4px;
+      margin-top: 20px;
+    }
+    .events-log {
+      height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      background-color: #f5f5f5;
+      font-family: monospace;
+      font-size: 14px;
+      margin-top: 20px;
+    }
+    .log-entry {
+      margin-bottom: 5px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    .success { color: #27ae60; }
+    .error { color: #e74c3c; }
+    .info { color: #2980b9; }
+  </style>
+</head>
+<body>
+  <h1>Readwise MCP Web Client</h1>
+  
+  <div class="card">
+    <h2>Server Configuration</h2>
+    <div class="form-group">
+      <label for="server-url">MCP Server URL:</label>
+      <input type="text" id="server-url" value="http://localhost:3000" />
+    </div>
+    <div class="form-group">
+      <label for="api-key">Readwise API Key:</label>
+      <input type="password" id="api-key" placeholder="Enter your Readwise API key" />
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Get Books</h2>
+    <div class="form-group">
+      <label for="books-page">Page:</label>
+      <input type="number" id="books-page" value="1" min="1" />
+    </div>
+    <div class="form-group">
+      <label for="books-page-size">Page Size:</label>
+      <input type="number" id="books-page-size" value="10" min="1" max="100" />
+    </div>
+    <button id="get-books-btn">Get Books</button>
+  </div>
+  
+  <div class="card">
+    <h2>Get Highlights</h2>
+    <div class="form-group">
+      <label for="book-id">Book ID:</label>
+      <input type="text" id="book-id" placeholder="Enter a book ID" />
+    </div>
+    <div class="form-group">
+      <label for="highlights-page">Page:</label>
+      <input type="number" id="highlights-page" value="1" min="1" />
+    </div>
+    <div class="form-group">
+      <label for="highlights-page-size">Page Size:</label>
+      <input type="number" id="highlights-page-size" value="20" min="1" max="100" />
+    </div>
+    <button id="get-highlights-btn">Get Highlights</button>
+  </div>
+  
+  <div class="card">
+    <h2>Search Highlights</h2>
+    <div class="form-group">
+      <label for="search-query">Search Query:</label>
+      <input type="text" id="search-query" placeholder="Enter search terms" />
+    </div>
+    <div class="form-group">
+      <label for="search-limit">Result Limit:</label>
+      <input type="number" id="search-limit" value="10" min="1" max="100" />
+    </div>
+    <button id="search-highlights-btn">Search Highlights</button>
+  </div>
+  
+  <div class="card">
+    <h2>Analyze Highlights</h2>
+    <div class="form-group">
+      <label for="analyze-book-id">Book ID:</label>
+      <input type="text" id="analyze-book-id" placeholder="Enter a book ID" />
+    </div>
+    <div class="form-group">
+      <label for="analyze-task">Task:</label>
+      <select id="analyze-task">
+        <option value="analyze">Analyze</option>
+        <option value="summarize">Summarize</option>
+        <option value="connect">Find Connections</option>
+        <option value="question">Generate Questions</option>
+      </select>
+    </div>
+    <button id="analyze-highlights-btn">Analyze Highlights</button>
+  </div>
+  
+  <h2>Events Log</h2>
+  <div class="events-log" id="events-log"></div>
+  
+  <h2>Response</h2>
+  <div class="response" id="response"></div>
+  
+  <script>
+    // Utility for generating UUIDs
+    function uuidv4() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+    
+    // Add a log entry to the events log
+    function logEvent(message, type = 'info') {
+      const logElement = document.getElementById('events-log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logElement.appendChild(entry);
+      logElement.scrollTop = logElement.scrollHeight;
+    }
+    
+    // Display response
+    function displayResponse(data) {
+      document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+    }
+    
+    // Make an MCP request using SSE
+    function makeMCPRequest(request) {
+      const serverUrl = document.getElementById('server-url').value;
+      const apiKey = document.getElementById('api-key').value;
+      
+      // Ensure request has a request_id
+      if (!request.request_id) {
+        request.request_id = uuidv4();
+      }
+      
+      logEvent(`Making ${request.type} request: ${request.name} (${request.request_id})`, 'info');
+      
+      // Initialize EventSource for SSE
+      let eventSource;
+      
+      // First make a POST request to initiate the MCP request
+      fetch(`${serverUrl}/mcp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(request)
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        logEvent(`Request accepted: ${data.request_id}`, 'success');
+        
+        // Now set up SSE to receive events
+        const sseUrl = `${serverUrl}/sse?request_id=${request.request_id}`;
+        eventSource = new EventSource(sseUrl);
+        
+        eventSource.addEventListener('request_received', function(e) {
+          logEvent('Server received request', 'info');
+        });
+        
+        eventSource.addEventListener('response', function(e) {
+          const responseData = JSON.parse(e.data);
+          logEvent('Received response', 'success');
+          displayResponse(responseData);
+        });
+        
+        eventSource.addEventListener('request_completed', function(e) {
+          logEvent('Request completed', 'success');
+          // Close the EventSource connection
+          eventSource.close();
+        });
+        
+        eventSource.addEventListener('error', function(e) {
+          logEvent('SSE connection error', 'error');
+          eventSource.close();
+        });
+      })
+      .catch(error => {
+        logEvent(`Error: ${error.message}`, 'error');
+      });
+    }
+    
+    // Get Books
+    document.getElementById('get-books-btn').addEventListener('click', function() {
+      const page = parseInt(document.getElementById('books-page').value);
+      const pageSize = parseInt(document.getElementById('books-page-size').value);
+      
+      const request = {
+        type: 'tool_call',
+        name: 'get_books',
+        parameters: {
+          page,
+          page_size: pageSize
+        },
+        request_id: `get-books-${Date.now()}`
+      };
+      
+      makeMCPRequest(request);
+    });
+    
+    // Get Highlights
+    document.getElementById('get-highlights-btn').addEventListener('click', function() {
+      const bookId = document.getElementById('book-id').value;
+      const page = parseInt(document.getElementById('highlights-page').value);
+      const pageSize = parseInt(document.getElementById('highlights-page-size').value);
+      
+      if (!bookId) {
+        logEvent('Book ID is required', 'error');
+        return;
+      }
+      
+      const request = {
+        type: 'tool_call',
+        name: 'get_highlights',
+        parameters: {
+          book_id: bookId,
+          page,
+          page_size: pageSize
+        },
+        request_id: `get-highlights-${Date.now()}`
+      };
+      
+      makeMCPRequest(request);
+    });
+    
+    // Search Highlights
+    document.getElementById('search-highlights-btn').addEventListener('click', function() {
+      const query = document.getElementById('search-query').value;
+      const limit = parseInt(document.getElementById('search-limit').value);
+      
+      if (!query) {
+        logEvent('Search query is required', 'error');
+        return;
+      }
+      
+      const request = {
+        type: 'tool_call',
+        name: 'search_highlights',
+        parameters: {
+          query,
+          limit
+        },
+        request_id: `search-highlights-${Date.now()}`
+      };
+      
+      makeMCPRequest(request);
+    });
+    
+    // Analyze Highlights
+    document.getElementById('analyze-highlights-btn').addEventListener('click', function() {
+      const bookId = document.getElementById('analyze-book-id').value;
+      const task = document.getElementById('analyze-task').value;
+      
+      if (!bookId) {
+        logEvent('Book ID is required', 'error');
+        return;
+      }
+      
+      const request = {
+        type: 'prompt_call',
+        name: 'readwise_highlight',
+        parameters: {
+          book_id: bookId,
+          task
+        },
+        request_id: `analyze-highlights-${Date.now()}`
+      };
+      
+      makeMCPRequest(request);
+    });
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      logEvent('Web client initialized', 'info');
+      logEvent('To use this client, start the Readwise MCP server with SSE transport:', 'info');
+      logEvent('npm run public', 'info');
+    });
+  </script>
+</body>
+</html> 
