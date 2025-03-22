@@ -18,15 +18,28 @@ mcp:
 startCommand:
   type: stdio
   configSchema:
-    # JSON Schema defining the configuration options for the MCP
     type: object
+    required:
+      - readwiseApiToken
     properties:
-      readwiseApiKey:
+      readwiseApiToken:
         type: string
-        description: The API key for the Readwise service (optional).
+        description: The API token for the Readwise API
+      port:
+        type: number
+        description: The port to run the server on (default 3001)
+        default: 3001
+      debug:
+        type: boolean
+        description: Enable debug logging
+        default: false
   commandFunction: |
-    (config) => ({ 
-      command: 'node', 
-      args: ['dist/index.js'], 
-      env: config.readwiseApiKey ? { READWISE_API_KEY: config.readwiseApiKey } : {} 
+    (config) => ({
+      command: 'node',
+      args: ['dist/simplified-server.js'],
+      env: {
+        READWISE_API_TOKEN: config.readwiseApiToken,
+        PORT: config.port ? config.port.toString() : '3001',
+        DEBUG: config.debug ? 'true' : 'false'
+      }
     })
