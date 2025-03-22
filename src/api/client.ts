@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { ClientConfig } from '../types';
+import { ClientConfig } from '../types/index.js';
 
 /**
  * Client for making requests to the Readwise API

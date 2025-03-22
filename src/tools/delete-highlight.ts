@@ -1,8 +1,8 @@
-import { BaseMCPTool } from '../mcp/registry/base-tool';
-import { ReadwiseAPI } from '../api/readwise-api';
-import { DeleteHighlightParams, MCPToolResult, isAPIError } from '../types';
-import { ValidationResult, validateRequired, validateAllowedValues } from '../types/validation';
-import { Logger } from '../utils/logger';
+import { BaseMCPTool } from '../mcp/registry/base-tool.js';
+import { ReadwiseAPI } from '../api/readwise-api.js';
+import { DeleteHighlightParams, MCPToolResult, isAPIError } from '../types/index.js';
+import { ValidationResult, validateRequired, validateAllowedValues } from '../types/validation.js';
+import { Logger } from '../utils/logger.js';
 
 /**
  * Tool for deleting highlights

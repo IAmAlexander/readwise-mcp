@@ -1,8 +1,8 @@
-import { ValidationResult, validateRequired, validateArray, combineValidationResults, validationError } from '../types/validation';
-import { BaseMCPTool } from '../mcp/registry/base-tool';
-import { ReadwiseAPI } from '../api/readwise-api';
-import { Logger } from '../utils/logger';
-import { BulkTagRequest, BulkTagResponse, MCPToolResult } from '../types';
+import { ValidationResult, validateRequired, validateArray, combineValidationResults, validationError } from '../types/validation.js';
+import { BaseMCPTool } from '../mcp/registry/base-tool.js';
+import { ReadwiseAPI } from '../api/readwise-api.js';
+import { Logger } from '../utils/logger.js';
+import { BulkTagRequest, BulkTagResponse, MCPToolResult } from '../types/index.js';
 
 /**
  * Parameters for bulk tag operations

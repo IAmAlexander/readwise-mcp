@@ -1,8 +1,8 @@
-import { BaseMCPTool } from '../mcp/registry/base-tool';
-import { ReadwiseAPI } from '../api/readwise-api';
-import { SearchByTagParams, Highlight, MCPToolResult, isAPIError, PaginatedResponse } from '../types';
-import { ValidationResult, validateRequired, validateArray, validateNumberRange } from '../types/validation';
-import { Logger } from '../utils/logger';
+import { BaseMCPTool } from '../mcp/registry/base-tool.js';
+import { ReadwiseAPI } from '../api/readwise-api.js';
+import { SearchByTagParams, Highlight, MCPToolResult, isAPIError, PaginatedResponse } from '../types/index.js';
+import { ValidationResult, validateRequired, validateArray, validateNumberRange } from '../types/validation.js';
+import { Logger } from '../utils/logger.js';
 
 /**
  * Tool for searching highlights by tags

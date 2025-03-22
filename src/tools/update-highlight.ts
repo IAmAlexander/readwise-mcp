@@ -1,8 +1,8 @@
-import { BaseMCPTool } from '../mcp/registry/base-tool';
-import { ReadwiseAPI } from '../api/readwise-api';
-import { UpdateHighlightParams, Highlight, MCPToolResult, isAPIError } from '../types';
-import { ValidationResult, validateRequired, validateNumberRange, validateArray } from '../types/validation';
-import { Logger } from '../utils/logger';
+import { BaseMCPTool } from '../mcp/registry/base-tool.js';
+import { ReadwiseAPI } from '../api/readwise-api.js';
+import { UpdateHighlightParams, Highlight, MCPToolResult, isAPIError } from '../types/index.js';
+import { ValidationResult, validateRequired, validateNumberRange, validateArray } from '../types/validation.js';
+import { Logger } from '../utils/logger.js';
 
 /**
  * Tool for updating existing highlights

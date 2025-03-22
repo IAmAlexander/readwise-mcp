@@ -1,6 +1,6 @@
-import { ReadwiseHighlightPrompt, ReadwiseHighlightPromptParams } from '../../src/prompts/highlight-prompt';
-import { Logger } from '../../src/utils/logger';
-import { ReadwiseAPI } from '../../src/api/readwise-api';
+import { ReadwiseHighlightPrompt, ReadwiseHighlightPromptParams } from '../../src/prompts/highlight-prompt.js';
+import { Logger } from '../../src/utils/logger.js';
+import { ReadwiseAPI } from '../../src/api/readwise-api.js';
 
 // Mock the required dependencies
 jest.mock('../../src/api/readwise-api');

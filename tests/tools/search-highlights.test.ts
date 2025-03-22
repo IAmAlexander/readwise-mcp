@@ -1,7 +1,7 @@
-import { SearchHighlightsTool } from '../../src/tools/search-highlights';
-import { ReadwiseAPI } from '../../src/api/readwise-api';
-import { Logger } from '../../src/utils/logger';
-import { SearchResult } from '../../src/types';
+import { SearchHighlightsTool } from '../../src/tools/search-highlights.js';
+import { ReadwiseAPI } from '../../src/api/readwise-api.js';
+import { Logger } from '../../src/utils/logger.js';
+import { SearchResult } from '../../src/types/index.js';
 
 // Mock the ReadwiseAPI
 jest.mock('../../src/api/readwise-api');

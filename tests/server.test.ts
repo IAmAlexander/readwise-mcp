@@ -1,14 +1,14 @@
-import { ReadwiseMCPServer } from '../src/server';
-import { Logger } from '../src/utils/logger';
-import { ReadwiseClient } from '../src/api/client';
-import { ReadwiseAPI } from '../src/api/readwise-api';
-import { GetBooksTool } from '../src/tools/get-books';
-import { GetHighlightsTool } from '../src/tools/get-highlights';
-import { GetDocumentsTool } from '../src/tools/get-documents';
-import { SearchHighlightsTool } from '../src/tools/search-highlights';
-import { ReadwiseHighlightPrompt } from '../src/prompts/highlight-prompt';
-import { ReadwiseSearchPrompt } from '../src/prompts/search-prompt';
-import { MCPRequest, MCPResponse, ErrorResponse } from '../src/types';
+import { ReadwiseMCPServer } from '../src/server.js';
+import { Logger } from '../src/utils/logger.js';
+import { ReadwiseClient } from '../src/api/client.js';
+import { ReadwiseAPI } from '../src/api/readwise-api.js';
+import { GetBooksTool } from '../src/tools/get-books.js';
+import { GetHighlightsTool } from '../src/tools/get-highlights.js';
+import { GetDocumentsTool } from '../src/tools/get-documents.js';
+import { SearchHighlightsTool } from '../src/tools/search-highlights.js';
+import { ReadwiseHighlightPrompt } from '../src/prompts/highlight-prompt.js';
+import { ReadwiseSearchPrompt } from '../src/prompts/search-prompt.js';
+import { MCPRequest, MCPResponse, ErrorResponse } from '../src/types/index.js';
 
 // Mock the required dependencies
 jest.mock('../src/api/client');

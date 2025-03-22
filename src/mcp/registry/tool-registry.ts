@@ -1,12 +1,13 @@
-import { BaseMCPTool } from './base-tool';
-import { Logger } from '../../utils/logger';
+import { Logger } from '../../utils/safe-logger';
+import { ReadwiseAPI } from '../../api/readwise-api.js';
+import { Tool, ValidationResult } from '../types';
 
 /**
  * Registry of MCP tools
  */
 export class ToolRegistry {
-  private tools: Map<string, BaseMCPTool<any, any>> = new Map();
-  private logger: Logger;
+  private readonly logger: Logger;
+  private readonly tools: Map<string, Tool>;
   
   /**
    * Create a new ToolRegistry
@@ -14,19 +15,26 @@ export class ToolRegistry {
    */
   constructor(logger: Logger) {
     this.logger = logger;
+    this.tools = new Map();
+  }
+  
+  public async initialize(): Promise<void> {
+    this.logger.info('Initializing tool registry');
+  }
+  
+  public async getTools(): Promise<Tool[]> {
+    return Array.from(this.tools.values());
   }
   
   /**
    * Register a tool
    * @param tool - The tool to register
    */
-  register(tool: BaseMCPTool<any, any>): void {
+  public register(tool: Tool): void {
+    this.logger.debug(`Registering tool: ${tool.name}`);
     if (this.tools.has(tool.name)) {
-      this.logger.warn(`Tool with name ${tool.name} already registered, overwriting`);
-    } else {
-      this.logger.debug(`Registering tool: ${tool.name}`);
+      this.logger.warn(`Tool ${tool.name} already registered, overwriting`);
     }
-    
     this.tools.set(tool.name, tool);
   }
   
@@ -35,10 +43,10 @@ export class ToolRegistry {
    * @param name - The name of the tool
    * @returns The tool, or undefined if not found
    */
-  get(name: string): BaseMCPTool<any, any> | undefined {
+  public get(name: string): Tool | undefined {
     const tool = this.tools.get(name);
     if (!tool) {
-      this.logger.warn(`Tool not found: ${name}`);
+      this.logger.warn(`Tool ${name} not found`);
     }
     return tool;
   }
@@ -47,7 +55,7 @@ export class ToolRegistry {
    * Get all registered tools
    * @returns All registered tools
    */
-  getAll(): BaseMCPTool<any, any>[] {
+  getAllTools(): Tool[] {
     return Array.from(this.tools.values());
   }
   
@@ -55,7 +63,7 @@ export class ToolRegistry {
    * Get the names of all registered tools
    * @returns The names of all registered tools
    */
-  getNames(): string[] {
+  public getNames(): string[] {
     return Array.from(this.tools.keys());
   }
   
@@ -63,13 +71,20 @@ export class ToolRegistry {
    * Get all registered tools as a map
    * @returns All registered tools as a map
    */
-  getToolMap(): Record<string, BaseMCPTool<any, any>> {
-    const toolMap: Record<string, BaseMCPTool<any, any>> = {};
-    
-    for (const [name, tool] of this.tools.entries()) {
-      toolMap[name] = tool;
-    }
-    
-    return toolMap;
+  getToolMap(): Record<string, Tool> {
+    return Object.fromEntries(this.tools);
+  }
+  
+  // Alias methods for backward compatibility
+  getAllToolNames(): string[] {
+    return this.getNames();
+  }
+
+  public has(name: string): boolean {
+    return this.tools.has(name);
+  }
+
+  public clear(): void {
+    this.tools.clear();
   }
 }

@@ -1,4 +1,4 @@
-import { Book, Document, Highlight, PaginatedResponse, SearchParams, SearchResult } from '../types';
+import { Book, Document, Highlight, PaginatedResponse, SearchParams, SearchResult } from '../types/index.js';
 
 /**
  * Mock data for testing

@@ -1,8 +1,8 @@
-import { BaseMCPTool } from '../mcp/registry/base-tool';
-import { ReadwiseAPI } from '../api/readwise-api';
-import { Document, PaginatedResponse, MCPToolResult, isAPIError } from '../types';
-import { ValidationResult, validateNumberRange } from '../types/validation';
-import { Logger } from '../utils/logger';
+import { BaseMCPTool } from '../mcp/registry/base-tool.js';
+import { ReadwiseAPI } from '../api/readwise-api.js';
+import { Document, PaginatedResponse, MCPToolResult, isAPIError } from '../types/index.js';
+import { ValidationResult, validateNumberRange } from '../types/validation.js';
+import { Logger } from '../utils/logger.js';
 
 /**
  * Parameters for the GetDocumentsTool

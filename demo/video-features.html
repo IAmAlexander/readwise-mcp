@@ -161,6 +161,11 @@
     .hidden {
       display: none;
     }
+    .search-container {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
@@ -211,6 +216,22 @@
     <div class="container">
       <div class="panel">
         <h2>Transcript</h2>
+        <div class="search-container">
+          <input type="text" id="transcript-search" class="search-input" placeholder="Search in transcript...">
+          <div class="search-options">
+            <label class="search-option">
+              <input type="checkbox" id="case-sensitive"> Case sensitive
+            </label>
+            <label class="search-option">
+              <input type="checkbox" id="whole-word"> Whole word
+            </label>
+          </div>
+          <div class="navigation-controls">
+            <button id="prev-match" class="navigation-button" disabled>Previous</button>
+            <button id="next-match" class="navigation-button" disabled>Next</button>
+            <span id="match-count"></span>
+          </div>
+        </div>
         <div id="transcript" class="transcript">
           <p>Select a video to view transcript</p>
         </div>
@@ -250,6 +271,9 @@
     let currentVideo = null;
     let nextPageCursor = null;
     let player = null;
+    let currentTranscript = null;
+    let currentSearchIndex = -1;
+    let searchMatches = [];
 
     // DOM Elements
     const authPanel = document.getElementById('auth-panel');
@@ -277,6 +301,12 @@
     const highlightTimestamp = document.getElementById('highlight-timestamp');
     const highlightNote = document.getElementById('highlight-note');
     const createHighlightButton = document.getElementById('create-highlight-button');
+    const transcriptSearchInput = document.getElementById('transcript-search');
+    const caseSensitiveCheckbox = document.getElementById('case-sensitive');
+    const wholeWordCheckbox = document.getElementById('whole-word');
+    const prevMatchButton = document.getElementById('prev-match');
+    const nextMatchButton = document.getElementById('next-match');
+    const matchCount = document.getElementById('match-count');
 
     // Helper Functions
     function showError(element, message) {
@@ -438,7 +468,7 @@
         }
         
         // Display transcript
-        displayTranscript(data.transcript);
+        loadTranscript(videoId);
         
         // Load highlights
         loadHighlights(videoId);
@@ -453,37 +483,41 @@
       }
     }
 
-    function displayTranscript(transcriptData) {
-      if (!transcriptData || transcriptData.length === 0) {
-        transcript.innerHTML = '<p>No transcript available for this video.</p>';
-        return;
-      }
+    async function loadTranscript(videoId) {
+      const transcriptElement = document.getElementById('transcript');
+      transcriptElement.innerHTML = '<p>Loading transcript...</p>';
 
-      transcript.innerHTML = '';
-      
-      transcriptData.forEach(item => {
-        const transcriptItem = document.createElement('div');
-        transcriptItem.className = 'transcript-item';
-        
-        const timestamp = document.createElement('div');
-        timestamp.className = 'timestamp';
-        timestamp.textContent = item.timestamp;
-        timestamp.addEventListener('click', () => {
-          if (player) {
-            const seconds = parseTimestamp(item.timestamp);
-            player.seekTo(seconds);
-            player.playVideo();
+      try {
+        const response = await fetch(`${API_BASE_URL}/videos/${videoId}/transcript`, {
+          headers: {
+            'Authorization': `Token ${apiToken}`
           }
         });
-        
-        const text = document.createElement('div');
-        text.className = 'text';
-        text.textContent = item.text;
-        
-        transcriptItem.appendChild(timestamp);
-        transcriptItem.appendChild(text);
-        transcript.appendChild(transcriptItem);
-      });
+
+        if (!response.ok) {
+          throw new Error('Failed to load transcript');
+        }
+
+        const transcript = await response.json();
+        currentTranscript = transcript;
+        renderTranscript(transcript);
+      } catch (error) {
+        transcriptElement.innerHTML = `<p class="error">Error loading transcript: ${error.message}</p>`;
+      }
+    }
+
+    function renderTranscript(transcript) {
+      const transcriptElement = document.getElementById('transcript');
+      transcriptElement.innerHTML = transcript.map(segment => `
+        <div class="transcript-segment">
+          <div class="timestamp">${formatTimestamp(segment.start)}</div>
+          <div class="content">
+            ${segment.speaker ? `<div class="speaker">${segment.speaker}</div>` : ''}
+            <div class="text">${segment.text}</div>
+            ${segment.confidence ? `<div class="confidence">Confidence: ${(segment.confidence * 100).toFixed(1)}%</div>` : ''}
+          </div>
+        </div>
+      `).join('');
     }
 
     async function loadHighlights(videoId) {
@@ -734,6 +768,10 @@
 
     loadPositionButton.addEventListener('click', loadPosition);
 
+    transcriptSearchInput.addEventListener('input', performSearch);
+    caseSensitiveCheckbox.addEventListener('change', performSearch);
+    wholeWordCheckbox.addEventListener('change', performSearch);
+
     // Check for stored token
     const storedToken = localStorage.getItem('readwise_api_token');
     if (storedToken) {
@@ -741,6 +779,129 @@
       apiToken = storedToken;
       checkAuth();
     }
+
+    function performSearch() {
+      if (!currentTranscript) return;
+
+      const query = transcriptSearchInput.value.trim();
+      if (!query) {
+        clearSearch();
+        return;
+      }
+
+      const options = {
+        caseSensitive: caseSensitiveCheckbox.checked,
+        wholeWord: wholeWordCheckbox.checked
+      };
+
+      searchMatches = [];
+      currentTranscript.forEach((segment, index) => {
+        const text = segment.text;
+        const matches = findMatches(text, query, options);
+        if (matches.length > 0) {
+          searchMatches.push({ segmentIndex: index, matches });
+        }
+      });
+
+      updateSearchUI();
+    }
+
+    function findMatches(text, query, options) {
+      const regex = new RegExp(
+        options.wholeWord ? `\\b${escapeRegExp(query)}\\b` : escapeRegExp(query),
+        options.caseSensitive ? 'g' : 'gi'
+      );
+      const matches = [];
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        matches.push({
+          start: match.index,
+          end: match.index + match[0].length
+        });
+      }
+      return matches;
+    }
+
+    function escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function updateSearchUI() {
+      if (searchMatches.length === 0) {
+        clearSearch();
+        return;
+      }
+
+      currentSearchIndex = 0;
+      updateMatchCount();
+      updateNavigationButtons();
+      highlightCurrentMatch();
+    }
+
+    function clearSearch() {
+      searchMatches = [];
+      currentSearchIndex = -1;
+      matchCount.textContent = '';
+      prevMatchButton.disabled = true;
+      nextMatchButton.disabled = true;
+      clearHighlights();
+    }
+
+    function updateMatchCount() {
+      matchCount.textContent = `${currentSearchIndex + 1} of ${searchMatches.length} matches`;
+    }
+
+    function updateNavigationButtons() {
+      prevMatchButton.disabled = currentSearchIndex <= 0;
+      nextMatchButton.disabled = currentSearchIndex >= searchMatches.length - 1;
+    }
+
+    function highlightCurrentMatch() {
+      clearHighlights();
+      if (currentSearchIndex >= 0 && currentSearchIndex < searchMatches.length) {
+        const match = searchMatches[currentSearchIndex];
+        const segment = currentTranscript[match.segmentIndex];
+        const text = segment.text;
+        const matchObj = match.matches[0];
+        
+        const highlightedText = text.substring(0, matchObj.start) +
+          `<span class="highlight">${text.substring(matchObj.start, matchObj.end)}</span>` +
+          text.substring(matchObj.end);
+
+        const segmentElement = transcript.children[match.segmentIndex];
+        segmentElement.querySelector('.text').innerHTML = highlightedText;
+        segmentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    function clearHighlights() {
+      if (!currentTranscript) return;
+      const segments = Array.from(transcript.children);
+      segments.forEach((segment, index) => {
+        const text = segment.querySelector('.text');
+        if (text) {
+          text.innerHTML = segment.textContent;
+        }
+      });
+    }
+
+    prevMatchButton.addEventListener('click', () => {
+      if (currentSearchIndex > 0) {
+        currentSearchIndex--;
+        updateMatchCount();
+        updateNavigationButtons();
+        highlightCurrentMatch();
+      }
+    });
+
+    nextMatchButton.addEventListener('click', () => {
+      if (currentSearchIndex < searchMatches.length - 1) {
+        currentSearchIndex++;
+        updateMatchCount();
+        updateNavigationButtons();
+        highlightCurrentMatch();
+      }
+    });
   </script>
 </body>
 </html> 

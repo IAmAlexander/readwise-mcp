@@ -1,8 +1,8 @@
-import { BaseMCPTool } from '../mcp/registry/base-tool';
-import { ReadwiseAPI } from '../api/readwise-api';
-import { SearchParams, SearchResult, MCPToolResult, isAPIError } from '../types';
-import { ValidationResult, validateRequired, validateNumberRange } from '../types/validation';
-import { Logger } from '../utils/logger';
+import { BaseMCPTool } from '../mcp/registry/base-tool.js';
+import { ReadwiseAPI } from '../api/readwise-api.js';
+import { SearchParams, SearchResult, MCPToolResult, isAPIError } from '../types/index.js';
+import { ValidationResult, validateRequired, validateNumberRange } from '../types/validation.js';
+import { Logger } from '../utils/logger.js';
 
 /**
  * Tool for searching highlights in Readwise

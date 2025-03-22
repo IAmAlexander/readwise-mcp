@@ -1,8 +1,8 @@
-import { ValidationResult } from '../types/validation';
-import { BaseMCPTool } from '../mcp/registry/base-tool';
-import { ReadwiseAPI } from '../api/readwise-api';
-import { Logger } from '../utils/logger';
-import { TagResponse, MCPToolResult } from '../types';
+import { ValidationResult } from '../types/validation.js';
+import { BaseMCPTool } from '../mcp/registry/base-tool.js';
+import { ReadwiseAPI } from '../api/readwise-api.js';
+import { Logger } from '../utils/logger.js';
+import { TagResponse, MCPToolResult } from '../types/index.js';
 
 /**
  * Tool to get all tags from Readwise

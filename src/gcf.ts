@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import app from './serverless';
+import app from './serverless.js';
 
 /**
  * Google Cloud Function handler for HTTP functions

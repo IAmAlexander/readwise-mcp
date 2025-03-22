@@ -1,8 +1,13 @@
-import { ValidationResult, validateNumberRange } from '../types/validation';
-import { BaseMCPTool } from '../mcp/registry/base-tool';
-import { ReadwiseAPI } from '../api/readwise-api';
-import { Logger } from '../utils/logger';
-import { PaginatedResponse, Book, MCPToolResult, isAPIError } from '../types';
+// Runtime imports
+import { BaseMCPTool } from '../mcp/registry/base-tool.js';
+import { ReadwiseAPI } from '../api/readwise-api.js';
+import { Logger } from '../utils/logger.js';
+import { validateNumberRange } from '../types/validation.js';
+import { isAPIError } from '../types/guards.js';
+
+// Type imports
+import type { PaginatedResponse, Book, MCPToolResult } from '../types/index.js';
+import type { ValidationResult } from '../types/validation.js';
 
 /**
  * Parameters for the GetBooksTool

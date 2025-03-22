@@ -1,5 +1,5 @@
-import { ValidationResult, validationSuccess } from '../../types/validation';
-import { Logger } from '../../utils/logger';
+import { ValidationResult, validationSuccess } from '../../types/validation.js';
+import { Logger } from '../../utils/logger.js';
 
 /**
  * Result type for MCP tools, wrapping the actual result for MCP compliance

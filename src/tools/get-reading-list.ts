@@ -1,8 +1,8 @@
-import { BaseMCPTool } from '../mcp/registry/base-tool';
-import { ReadwiseAPI } from '../api/readwise-api';
-import { GetReadingListParams, ReadingListResponse, MCPToolResult, isAPIError } from '../types';
-import { ValidationResult, validateNumberRange, validateAllowedValues } from '../types/validation';
-import { Logger } from '../utils/logger';
+import { BaseMCPTool } from '../mcp/registry/base-tool.js';
+import { ReadwiseAPI } from '../api/readwise-api.js';
+import { GetReadingListParams, ReadingListResponse, MCPToolResult, isAPIError } from '../types/index.js';
+import { ValidationResult, validateNumberRange, validateAllowedValues } from '../types/validation.js';
+import { Logger } from '../utils/logger.js';
 
 /**
  * Tool for retrieving a list of documents with their reading progress

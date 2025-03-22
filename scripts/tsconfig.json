@@ -1,0 +1,41 @@
+{
+    "compilerOptions": {
+      "target": "ES2022",
+      "module": "NodeNext",
+      "moduleResolution": "NodeNext",
+      "outDir": "../dist-scripts",
+      "rootDir": ".",
+      "strict": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      "allowJs": true,
+      "resolveJsonModule": true,
+      "declaration": true,
+      "isolatedModules": true,
+      "sourceMap": true,
+      "declarationMap": true,
+      "baseUrl": ".",
+      "noImplicitAny": true,
+      "noImplicitThis": true,
+      "strictNullChecks": true,
+      "strictFunctionTypes": true,
+      "strictPropertyInitialization": true,
+      "noImplicitReturns": false,
+      "noFallthroughCasesInSwitch": true,
+      "experimentalDecorators": true,
+      "emitDecoratorMetadata": true,
+      "moduleDetection": "force"
+    },
+    "ts-node": {
+      "esm": true,
+      "experimentalSpecifierResolution": "node"
+    },
+    "include": [
+      "./**/*"
+    ],
+    "exclude": [
+      "node_modules",
+      "dist-scripts"
+    ]
+} 

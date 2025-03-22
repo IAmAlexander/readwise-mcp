@@ -15,6 +15,22 @@ A Model Context Protocol (MCP) server for accessing and interacting with your Re
 - Health check endpoint for monitoring
 - Improved setup wizard with API key validation
 
+## Project Structure
+
+This repository is organized into the following key directories:
+
+- **src/**: Main source code for the Readwise MCP server
+- **test-scripts/**: Test scripts and utilities for validating MCP server functionality
+  - `smart-mcp-test.sh`: Main testing script for both stdio and SSE transports
+  - `run-simple-server.sh`: Script to run a simple MCP server
+  - See `test-scripts/README.md` for complete documentation
+- **examples/**: Example implementations and code samples
+  - `examples/mcp-implementations/`: Basic MCP server implementations
+  - `examples/test-clients/`: Client-side test scripts
+  - See `examples/README.md` for complete documentation
+- **dist/**: Compiled JavaScript output (generated)
+- **scripts/**: Utility scripts for development and testing
+
 ## Installation
 
 ```bash
@@ -74,17 +90,89 @@ await server.start();
 
 ## Testing with MCP Inspector
 
-To test your server with the MCP Inspector:
+The project includes built-in support for testing with the MCP Inspector. You can use either the TypeScript script or the shell script to run the inspector.
+
+### Automated Tests
+
+Run the automated test suite that verifies all tools and prompts:
 
 ```bash
-# First, build the project
-npm run build
-
-# Then run the inspector test script
+# Run automated inspector tests
 npm run test-inspector
+
+# Run in CI mode (exits with status code)
+npm run test-inspector:ci
 ```
 
-This will start the server in SSE mode and provide instructions for connecting with the MCP Inspector.
+The test suite verifies:
+- Server startup and connection
+- Tool availability and responses
+- Prompt functionality
+- Error handling
+- Response format compliance
+
+Each test provides detailed output and a summary of passed/failed cases.
+
+### Manual Testing
+
+### Using the Shell Script
+
+```bash
+# Test with stdio transport (default)
+./scripts/inspector.sh
+
+# Test with SSE transport
+./scripts/inspector.sh -t sse -p 3001
+
+# Enable debug mode
+./scripts/inspector.sh -d
+
+# Full options
+./scripts/inspector.sh --transport sse --port 3001 --debug
+```
+
+### Using the TypeScript Script
+
+```bash
+# Test with stdio transport (default)
+npm run inspector
+
+# Test with SSE transport
+npm run inspector -- -t sse -p 3001
+
+# Enable debug mode
+npm run inspector -- -d
+
+# Full options
+npm run inspector -- --transport sse --port 3001 --debug
+```
+
+### Available Options
+
+- `-t, --transport <type>`: Transport type (stdio or sse), default: stdio
+- `-p, --port <number>`: Port number for SSE transport, default: 3001
+- `-d, --debug`: Enable debug mode
+
+### Example Inspector Commands
+
+Test a specific tool:
+```bash
+./scripts/inspector.sh
+> tool get-highlights --parameters '{"page": 1, "page_size": 10}'
+```
+
+Test a prompt:
+```bash
+./scripts/inspector.sh
+> prompt search-highlights --parameters '{"query": "python"}'
+```
+
+List available tools and prompts:
+```bash
+./scripts/inspector.sh
+> list tools
+> list prompts
+```
 
 ## Testing Without a Readwise API Key
 

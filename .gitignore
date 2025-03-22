@@ -9,6 +9,7 @@ build/
 # Environment variables
 .env
 .env.local
+.env.*.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -19,6 +20,19 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+# MCP test logs
+smart-mcp-test-*.log
+mcp-test-*.log
+*_test_*.log
+server*.log
+stdio*.log
+sse*.log
+
+# Test output files
+health_*.json
+test_*.json
+stdio_*.txt
+echo_*.txt
 
 # Editor directories and files
 .idea/
@@ -50,3 +64,19 @@ coverage/
 
 # Project development guides
 Project Guide/
+
+# Test script commands
+# Run the full test suite
+./test-readwise-mcp.sh
+
+# Run only stdio mode tests
+./test-readwise-mcp.sh stdio
+
+# Run comprehensive SSE mode tests
+./test-readwise-mcp.sh sse
+
+# Run SSE tests with performance testing
+./test-readwise-mcp.sh perf
+
+# Get help
+./test-readwise-mcp.sh --help

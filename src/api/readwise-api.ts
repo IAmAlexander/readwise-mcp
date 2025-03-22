@@ -1,4 +1,4 @@
-import { ReadwiseClient } from './client';
+import { ReadwiseClient } from './client.js';
 import { 
   GetHighlightsParams, 
   GetBooksParams,
@@ -26,8 +26,16 @@ import {
   AdvancedSearchParams,
   AdvancedSearchResult,
   SearchByTagParams,
-  SearchByDateParams
-} from '../types';
+  SearchByDateParams,
+  GetVideosParams,
+  VideoResponse,
+  VideoDetailsResponse,
+  CreateVideoHighlightParams,
+  VideoHighlight,
+  VideoHighlightsResponse,
+  UpdateVideoPositionParams,
+  VideoPlaybackPosition
+} from '../types/index.js';
 
 /**
  * API interface for interacting with Readwise
@@ -212,12 +220,12 @@ export class ReadwiseAPI {
    * @returns A promise resolving to the reading progress
    */
   async getReadingProgress(params: GetReadingProgressParams): Promise<ReadingProgress> {
-    const response = await this.client.get<Document>(`/document/${params.document_id}/progress`);
-    const metadata = response.user_metadata || {};
+    const document = await this.client.get<Document>(`/document/${params.document_id}/progress`);
+    const metadata = document.user_metadata || {};
     
     return {
       document_id: params.document_id,
-      title: response.title,
+      title: document.title,
       status: metadata.reading_status || 'not_started',
       percentage: metadata.reading_percentage || 0,
       current_page: metadata.current_page,
@@ -440,30 +448,68 @@ export class ReadwiseAPI {
    */
   async searchByDate(params: SearchByDateParams): Promise<PaginatedResponse<Highlight>> {
     const queryParams = new URLSearchParams();
+    if (params.start_date) queryParams.append('start_date', params.start_date);
+    if (params.end_date) queryParams.append('end_date', params.end_date);
+    if (params.date_field) queryParams.append('date_field', params.date_field);
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.page_size) queryParams.append('page_size', params.page_size.toString());
+
+    return this.client.get<PaginatedResponse<Highlight>>(`/highlights/search/date?${queryParams}`);
+  }
+
+  // Video-related methods
+  async getVideos(params?: GetVideosParams): Promise<VideoResponse> {
+    const queryParams = new URLSearchParams();
     
-    if (params.start_date) {
-      queryParams.append('start_date', params.start_date);
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString());
     }
     
-    if (params.end_date) {
-      queryParams.append('end_date', params.end_date);
+    if (params?.pageCursor) {
+      queryParams.append('page_cursor', params.pageCursor);
     }
     
-    if (params.date_field) {
-      queryParams.append('date_field', params.date_field);
+    if (params?.tags?.length) {
+      queryParams.append('tags', params.tags.join(','));
     }
     
-    // Add pagination parameters
-    if (params.page) {
-      queryParams.append('page', params.page.toString());
+    if (params?.platform) {
+      queryParams.append('platform', params.platform);
     }
     
-    if (params.page_size) {
-      queryParams.append('page_size', params.page_size.toString());
-    }
-    
-    const url = `/search/date?${queryParams.toString()}`;
-    
-    return this.client.get<PaginatedResponse<Highlight>>(url);
+    const response = await this.client.get<VideoResponse>(`/videos?${queryParams}`);
+    return response;
+  }
+
+  async getVideo(document_id: string): Promise<VideoDetailsResponse> {
+    const response = await this.client.get<VideoDetailsResponse>(`/video/${document_id}`);
+    return response;
+  }
+
+  async createVideoHighlight(params: CreateVideoHighlightParams): Promise<VideoHighlight> {
+    const response = await this.client.post<VideoHighlight>(`/video/${params.document_id}/highlight`, {
+      text: params.text,
+      timestamp: params.timestamp,
+      note: params.note
+    });
+    return response;
+  }
+
+  async getVideoHighlights(document_id: string): Promise<VideoHighlightsResponse> {
+    const response = await this.client.get<VideoHighlightsResponse>(`/video/${document_id}/highlights`);
+    return response;
+  }
+
+  async updateVideoPosition(params: UpdateVideoPositionParams): Promise<VideoPlaybackPosition> {
+    const response = await this.client.post<VideoPlaybackPosition>(`/video/${params.document_id}/position`, {
+      position: params.position,
+      duration: params.duration
+    });
+    return response;
+  }
+
+  async getVideoPosition(document_id: string): Promise<VideoPlaybackPosition> {
+    const response = await this.client.get<VideoPlaybackPosition>(`/video/${document_id}/position`);
+    return response;
   }
 }

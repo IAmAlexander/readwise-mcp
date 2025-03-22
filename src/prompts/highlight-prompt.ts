@@ -1,8 +1,8 @@
-import { BaseMCPPrompt } from '../mcp/registry/base-prompt';
-import { ReadwiseAPI } from '../api/readwise-api';
-import { GetHighlightsParams } from '../types';
-import { ValidationResult, validateNumberRange, validateAllowedValues, combineValidationResults } from '../types/validation';
-import { Logger } from '../utils/logger';
+import { BaseMCPPrompt } from '../mcp/registry/base-prompt.js';
+import { ReadwiseAPI } from '../api/readwise-api.js';
+import { GetHighlightsParams } from '../types/index.js';
+import { ValidationResult, validateNumberRange, validateAllowedValues, combineValidationResults } from '../types/validation.js';
+import { Logger } from '../utils/logger.js';
 
 /**
  * Parameters for the ReadwiseHighlightPrompt

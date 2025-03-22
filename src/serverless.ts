@@ -4,9 +4,9 @@ import serverless from 'serverless-http';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import { createServer } from 'http';
-import { ReadwiseMCPServer } from './server';
-import { getConfig } from './utils/config';
-import { Logger, LogLevel } from './utils/logger';
+import { ReadwiseMCPServer } from './server.js';
+import { getConfig } from './utils/config.js';
+import { Logger, LogLevel } from './utils/logger.js';
 
 // Create an Express app
 const app = express();
@@ -18,16 +18,21 @@ app.use(cors());
 // Get config
 const config = getConfig();
 
-// Create a logger
-const logger = Logger.forTransport('sse', config.debug);
+// Create logger instance
+const logger = new Logger({
+  level: LogLevel.INFO,
+  transport: 'stdout',
+  timestamps: true,
+  colors: true
+});
 
 // Create HTTP server
 const server = createServer(app);
 
 // Create MCP server
 const mcpServer = new ReadwiseMCPServer(
-  config.readwiseApiKey,
-  config.port,
+  process.env.READWISE_API_KEY || '',
+  Number(process.env.PORT) || 3000,
   logger,
   'sse'
 );
@@ -57,12 +62,13 @@ app.post('/mcp', (req, res) => {
   });
 });
 
+// Start the server
+mcpServer.start().catch(err => logger.error('Failed to start server:', err));
+
 // Create a serverless handler
 const handler = serverless(app);
 
-/**
- * AWS Lambda handler function
- */
+// Export the serverless handler
 export const lambdaHandler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
@@ -93,4 +99,7 @@ export const lambdaHandler = async (
       })
     };
   }
-}; 
+};
+
+// Export the Express app as default
+export default app; 

@@ -1,8 +1,9 @@
 // Core type definitions for Readwise MCP
-export * from './validation';
+export * from './validation.js';
+export * from './guards.js';
 
 // Import ValidationResult for use in MCPTool interface
-import { ValidationResult } from './validation';
+import type { ValidationResult } from './validation.js';
 
 /**
  * Result type for MCP tools
@@ -20,14 +21,6 @@ export interface MCPTool<TParams, TResult> {
   parameters: Record<string, any>;
   execute(params: TParams): Promise<MCPToolResult<TResult>>;
   validate?(params: TParams): ValidationResult;
-}
-
-// Utility function to check if an error is an API error
-export function isAPIError(error: unknown): boolean {
-  return error !== null && 
-         typeof error === 'object' && 
-         'type' in error && 
-         (error as any).type === 'api';
 }
 
 // Readwise data types
@@ -363,4 +356,76 @@ export interface AdvancedSearchResult {
     categories?: Array<{ category: string; count: number }>;
     books?: Array<{ book_id: string; title: string; count: number }>;
   };
+}
+
+export interface VideoTranscriptSegment {
+  timestamp: string;
+  text: string;
+}
+
+export interface VideoMetadata {
+  id: string;
+  title: string;
+  url: string;
+  author: string;
+  tags: string[];
+  duration?: number;
+  platform?: string;
+  thumbnail_url?: string;
+  description?: string;
+}
+
+export interface VideoHighlight {
+  id: string;
+  text: string;
+  note?: string;
+  timestamp: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VideoPlaybackPosition {
+  document_id: string;
+  position: number;
+  percentage: number;
+  last_updated: string;
+}
+
+export interface GetVideosParams {
+  limit?: number;
+  pageCursor?: string;
+  tags?: string[];
+  platform?: string;
+}
+
+export interface GetVideoParams {
+  document_id: string;
+}
+
+export interface CreateVideoHighlightParams {
+  document_id: string;
+  text: string;
+  timestamp: string;
+  note?: string;
+}
+
+export interface UpdateVideoPositionParams {
+  document_id: string;
+  position: number;
+  duration: number;
+}
+
+export interface VideoResponse {
+  count: number;
+  results: VideoMetadata[];
+  nextPageCursor?: string;
+}
+
+export interface VideoDetailsResponse extends VideoMetadata {
+  transcript: VideoTranscriptSegment[];
+}
+
+export interface VideoHighlightsResponse {
+  count: number;
+  results: VideoHighlight[];
 } 

@@ -1,15 +1,23 @@
 #!/usr/bin/env node
 
-import { ReadwiseMCPServer } from './server';
-import { getConfig, saveConfig } from './utils/config';
-import { Logger, LogLevel } from './utils/logger';
+// Runtime imports - need .js extension
+import { ReadwiseMCPServer } from './server.js';
+import { Server as MCPServer } from '@modelcontextprotocol/sdk/server/index.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+
+// Type-only imports - no .js extension
+import type { TransportType } from './types/index.js';
+import type { ValidationResult } from './types/validation.js';
+
+// Local imports with implementation - need .js extension
+import { ReadwiseClient } from './api/client.js';
+import { ReadwiseAPI } from './api/readwise-api.js';
+import { Logger, LogLevel } from './utils/logger.js';
+import { getConfig, saveConfig } from './utils/config.js';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import readline from 'readline';
 import { stdin as input, stdout as output } from 'process';
-import { TransportType } from './types';
-import { ReadwiseClient } from './api/client';
-import { ReadwiseAPI } from './api/readwise-api';
 
 /**
  * Main entry point for the Readwise MCP server
@@ -20,7 +28,7 @@ async function main() {
       alias: 'p',
       description: 'Port to listen on',
       type: 'number',
-      default: 3000
+      default: process.env.PORT ? parseInt(process.env.PORT) : 3001
     })
     .option('transport', {
       alias: 't',
@@ -58,6 +66,7 @@ async function main() {
   const logger = Logger.forTransport(argv.transport, argv.debug);
 
   logger.info('Starting Readwise MCP server');
+  logger.debug('Command line arguments:', argv);
 
   try {
     // Run setup wizard if requested
@@ -68,7 +77,9 @@ async function main() {
     }
 
     // Load config
+    logger.debug('Loading configuration...');
     const config = getConfig();
+    logger.debug('Configuration loaded');
     
     // Get API key from command-line args or config
     const apiKey = argv['api-key'] || config.readwiseApiKey;
@@ -77,7 +88,9 @@ async function main() {
       logger.error('No API key provided. Please provide an API key using the --api-key flag or run the setup wizard with --setup');
       process.exit(1);
     }
+    logger.debug('API key validated');
 
+    logger.info('Initializing server...');
     // Start the server
     const server = new ReadwiseMCPServer(
       apiKey,
@@ -86,7 +99,9 @@ async function main() {
       argv.transport
     );
 
+    logger.info('Starting server...');
     await server.start();
+    logger.info('Server started successfully');
     
     // Handle shutdown gracefully
     const shutdown = async () => {

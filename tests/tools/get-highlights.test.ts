@@ -1,8 +1,8 @@
-import { GetHighlightsTool } from '../../src/tools/get-highlights';
-import { ReadwiseAPI } from '../../src/api/readwise-api';
-import { Logger } from '../../src/utils/logger';
-import { Highlight, PaginatedResponse } from '../../src/types';
-import { validateNumberRange } from '../../src/types/validation';
+import { GetHighlightsTool } from '../../src/tools/get-highlights.js';
+import { ReadwiseAPI } from '../../src/api/readwise-api.js';
+import { Logger } from '../../src/utils/logger.js';
+import { Highlight, PaginatedResponse } from '../../src/types/index.js';
+import { validateNumberRange } from '../../src/types/validation.js';
 
 // Get mocked instances of validateNumberRange
 // This will make our tests match what the implementation actually does

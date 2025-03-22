@@ -1,7 +1,7 @@
-import { GetDocumentsTool } from '../../src/tools/get-documents';
-import { ReadwiseAPI } from '../../src/api/readwise-api';
-import { Logger } from '../../src/utils/logger';
-import { Document, PaginatedResponse } from '../../src/types';
+import { GetDocumentsTool } from '../../src/tools/get-documents.js';
+import { ReadwiseAPI } from '../../src/api/readwise-api.js';
+import { Logger } from '../../src/utils/logger.js';
+import { Document, PaginatedResponse } from '../../src/types/index.js';
 
 // Mock the ReadwiseAPI
 jest.mock('../../src/api/readwise-api');

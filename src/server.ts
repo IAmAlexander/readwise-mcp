@@ -1,36 +1,58 @@
-import express, { Express, Request, Response } from 'express';
+// Third-party imports
+import express from 'express';
+import type { Express, Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
-import { createServer, Server as HttpServer } from 'http';
-import { SSEServer } from './utils/sse';
-import { ReadwiseClient } from './api/client';
-import { ReadwiseAPI } from './api/readwise-api';
-import { BaseMCPTool } from './mcp/registry/base-tool';
-import { BaseMCPPrompt } from './mcp/registry/base-prompt';
-import { ToolRegistry } from './mcp/registry/tool-registry';
-import { PromptRegistry } from './mcp/registry/prompt-registry';
-import { GetBooksTool } from './tools/get-books';
-import { GetHighlightsTool } from './tools/get-highlights';
-import { GetDocumentsTool } from './tools/get-documents';
-import { SearchHighlightsTool } from './tools/search-highlights';
-import { ReadwiseHighlightPrompt } from './prompts/highlight-prompt';
-import { ReadwiseSearchPrompt } from './prompts/search-prompt';
-import { Logger } from './utils/logger';
-import { MCPRequest, MCPResponse, ErrorResponse, ErrorType, TransportType } from './types';
-import { ValidationResult, ValidationError } from './types/validation';
-import { GetTagsTool } from './tools/get-tags';
-import { DocumentTagsTool } from './tools/document-tags';
-import { BulkTagsTool } from './tools/bulk-tags';
-import { GetReadingProgressTool } from './tools/get-reading-progress';
-import { UpdateReadingProgressTool } from './tools/update-reading-progress';
-import { GetReadingListTool } from './tools/get-reading-list';
-import { CreateHighlightTool } from './tools/create-highlight';
-import { UpdateHighlightTool } from './tools/update-highlight';
-import { DeleteHighlightTool } from './tools/delete-highlight';
-import { CreateNoteTool } from './tools/create-note';
-import { AdvancedSearchTool } from './tools/advanced-search';
-import { SearchByTagTool } from './tools/search-by-tag';
-import { SearchByDateTool } from './tools/search-by-date';
+import { createServer } from 'http';
+import type { Server as HttpServer } from 'http';
+
+// MCP SDK imports - need .js extension for runtime imports
+import { Server as MCPServer } from '@modelcontextprotocol/sdk/server/index.js';
+import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+
+// Local type imports - no .js extension
+import type { MCPRequest, MCPResponse, ErrorResponse, ErrorType, TransportType } from './types/index.js';
+import type { ValidationResult, ValidationError } from './types/validation.js';
+
+// Local implementation imports - need .js extension
+import { ReadwiseClient } from './api/client.js';
+import { ReadwiseAPI } from './api/readwise-api.js';
+import { BaseMCPTool } from './mcp/registry/base-tool.js';
+import { BaseMCPPrompt } from './mcp/registry/base-prompt.js';
+import { ToolRegistry } from './mcp/registry/tool-registry.js';
+import { PromptRegistry } from './mcp/registry/prompt-registry.js';
+import { Logger } from './utils/logger.js';
+import { getConfig } from './utils/config.js';
+
+// Tool imports - need .js extension
+import { GetBooksTool } from './tools/get-books.js';
+import { GetHighlightsTool } from './tools/get-highlights.js';
+import { GetDocumentsTool } from './tools/get-documents.js';
+import { SearchHighlightsTool } from './tools/search-highlights.js';
+import { GetTagsTool } from './tools/get-tags.js';
+import { DocumentTagsTool } from './tools/document-tags.js';
+import { BulkTagsTool } from './tools/bulk-tags.js';
+import { GetReadingProgressTool } from './tools/get-reading-progress.js';
+import { UpdateReadingProgressTool } from './tools/update-reading-progress.js';
+import { GetReadingListTool } from './tools/get-reading-list.js';
+import { CreateHighlightTool } from './tools/create-highlight.js';
+import { UpdateHighlightTool } from './tools/update-highlight.js';
+import { DeleteHighlightTool } from './tools/delete-highlight.js';
+import { CreateNoteTool } from './tools/create-note.js';
+import { AdvancedSearchTool } from './tools/advanced-search.js';
+import { SearchByTagTool } from './tools/search-by-tag.js';
+import { SearchByDateTool } from './tools/search-by-date.js';
+import { GetVideosTool } from './tools/get-videos.js';
+import { GetVideoTool } from './tools/get-video.js';
+import { CreateVideoHighlightTool } from './tools/create-video-highlight.js';
+import { GetVideoHighlightsTool } from './tools/get-video-highlights.js';
+import { UpdateVideoPositionTool } from './tools/update-video-position.js';
+import { GetVideoPositionTool } from './tools/get-video-position.js';
+
+// Prompt imports - need .js extension
+import { ReadwiseHighlightPrompt } from './prompts/highlight-prompt.js';
+import { ReadwiseSearchPrompt } from './prompts/search-prompt.js';
 
 /**
  * Readwise MCP Server implementation
@@ -38,7 +60,7 @@ import { SearchByDateTool } from './tools/search-by-date';
 export class ReadwiseMCPServer {
   private app: Express;
   private server: HttpServer;
-  private sseServer?: SSEServer;
+  private mcpServer: MCPServer;
   private port: number;
   private apiClient: ReadwiseClient;
   private api: ReadwiseAPI;
@@ -62,9 +84,17 @@ export class ReadwiseMCPServer {
     transport: TransportType = 'stdio',
     baseUrl?: string
   ) {
-    this.port = port;
+    // Check if running under MCP Inspector
+    const isMCPInspector = process.env.MCP_INSPECTOR === 'true' || 
+                          process.argv.includes('--mcp-inspector') ||
+                          process.env.NODE_ENV === 'mcp-inspector';
+    
+    // When running under inspector:
+    // - Use port 3000 (required for inspector's proxy)
+    // - Force SSE transport
+    this.port = isMCPInspector ? 3000 : port;
+    this.transportType = isMCPInspector ? 'sse' : transport;
     this.logger = logger;
-    this.transportType = transport;
     this.startTime = Date.now();
 
     // Initialize API client
@@ -82,14 +112,24 @@ export class ReadwiseMCPServer {
     // Initialize Express app
     this.app = express();
     this.app.use(bodyParser.json());
-    this.app.use(cors());
+    this.app.use(cors({
+      origin: '*',
+      methods: ['GET', 'POST', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: true
+    }));
     this.server = createServer(this.app);
 
-    // Initialize SSE server if using SSE transport
-    if (this.transportType === 'sse') {
-      this.logger.info('Initializing SSE server');
-      this.sseServer = new SSEServer(this.server);
-    }
+    // Initialize MCP Server
+    this.mcpServer = new MCPServer({
+      name: "readwise-mcp",
+      version: "1.0.0"
+    }, {
+      capabilities: {
+        tools: this.toolRegistry.getNames().reduce((acc, name) => ({ ...acc, [name]: true }), {}),
+        prompts: this.promptRegistry.getNames().reduce((acc, name) => ({ ...acc, [name]: true }), {})
+      }
+    });
 
     // Register tools
     this.registerTools();
@@ -123,6 +163,14 @@ export class ReadwiseMCPServer {
     const searchByTagTool = new SearchByTagTool(this.api, this.logger);
     const searchByDateTool = new SearchByDateTool(this.api, this.logger);
 
+    // Video tools
+    const getVideosTool = new GetVideosTool(this.api, this.logger);
+    const getVideoTool = new GetVideoTool(this.api, this.logger);
+    const createVideoHighlightTool = new CreateVideoHighlightTool(this.api, this.logger);
+    const getVideoHighlightsTool = new GetVideoHighlightsTool(this.api, this.logger);
+    const updateVideoPositionTool = new UpdateVideoPositionTool(this.api, this.logger);
+    const getVideoPositionTool = new GetVideoPositionTool(this.api, this.logger);
+
     // Register tools
     this.toolRegistry.register(getHighlightsTool);
     this.toolRegistry.register(getBooksTool);
@@ -141,6 +189,12 @@ export class ReadwiseMCPServer {
     this.toolRegistry.register(advancedSearchTool);
     this.toolRegistry.register(searchByTagTool);
     this.toolRegistry.register(searchByDateTool);
+    this.toolRegistry.register(getVideosTool);
+    this.toolRegistry.register(getVideoTool);
+    this.toolRegistry.register(createVideoHighlightTool);
+    this.toolRegistry.register(getVideoHighlightsTool);
+    this.toolRegistry.register(updateVideoPositionTool);
+    this.toolRegistry.register(getVideoPositionTool);
 
     this.logger.info(`Registered ${this.toolRegistry.getNames().length} tools`);
   }
@@ -167,19 +221,29 @@ export class ReadwiseMCPServer {
    */
   async start(): Promise<void> {
     return new Promise<void>((resolve) => {
+      this.logger.debug('Starting HTTP server...');
       // Start the HTTP server
       this.server.listen(this.port, () => {
         this.logger.info(`Server started on port ${this.port} with ${this.transportType} transport`);
         this.logger.info(`Startup time: ${Date.now() - this.startTime}ms`);
         
+        this.logger.debug('Setting up routes...');
         // Add routes
         this.setupRoutes();
+        this.logger.debug('Routes configured');
         
         // If using stdio transport, set up stdin handler
         if (this.transportType === 'stdio') {
+          this.logger.debug('Setting up stdio transport...');
           this.setupStdioTransport();
+          this.logger.debug('Stdio transport configured');
+        } else if (this.transportType === 'sse') {
+          this.logger.debug('Setting up SSE transport...');
+          this.setupSSETransport();
+          this.logger.debug('SSE transport configured');
         }
         
+        this.logger.info('Server initialization complete');
         resolve();
       });
     });
@@ -218,45 +282,30 @@ export class ReadwiseMCPServer {
         prompts: this.promptRegistry.getNames()
       });
     });
-    
-    // MCP endpoint for SSE transport
-    if (this.transportType === 'sse') {
-      this.app.post('/mcp', (req: Request, res: Response) => {
-        const requestId = req.body.request_id;
-        
-        if (!requestId) {
-          res.status(400).json({
-            error: 'Missing request_id'
-          });
-          return;
-        }
-        
-        // Send SSE event indicating the request was received
-        if (this.sseServer) {
-          this.sseServer.send(requestId, 'request_received', {
-            request_id: requestId,
-            timestamp: new Date().toISOString()
-          });
-          
-          // Process the request
-          this.handleMCPRequest(req.body, (response) => {
-            this.sseServer?.send(requestId, 'response', response);
-            
-            // Send completion event
-            this.sseServer?.send(requestId, 'request_completed', {
-              request_id: requestId,
-              timestamp: new Date().toISOString()
-            });
-          });
-        }
-        
-        // Respond to the initial request
-        res.json({
-          status: 'processing',
-          request_id: requestId
-        });
+
+    // Capabilities endpoint
+    this.app.get('/capabilities', (_req: Request, res: Response) => {
+      res.json({
+        version: '1.0.0',
+        transports: ['sse'],
+        tools: this.toolRegistry.getNames().map(name => {
+          const tool = this.toolRegistry.get(name);
+          return {
+            name,
+            description: tool?.description || '',
+            parameters: tool?.parameters || {}
+          };
+        }),
+        prompts: this.promptRegistry.getNames().map(name => {
+          const prompt = this.promptRegistry.get(name);
+          return {
+            name,
+            description: prompt?.description || '',
+            parameters: prompt?.parameters || {}
+          };
+        })
       });
-    }
+    });
   }
   
   /**
@@ -589,5 +638,156 @@ export class ReadwiseMCPServer {
           request_id
         });
       });
+  }
+
+  /**
+   * Set up SSE transport
+   */
+  private setupSSETransport(): void {
+    this.logger.debug('Setting up SSE transport');
+
+    // SSE endpoint for server-to-client streaming
+    this.app.get('/sse', async (req: Request, res: Response) => {
+      try {
+        this.logger.debug('New SSE connection request', {
+          query: req.query,
+          headers: req.headers
+        });
+
+        // Set SSE headers
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.flushHeaders();
+
+        // Create transport instance for this connection
+        const transport = new SSEServerTransport('/sse', res);
+
+        // Set up transport handlers
+        transport.onmessage = async (message) => {
+          this.logger.debug('Received message:', message);
+          if (message && typeof message === 'object' && 'method' in message && 'id' in message) {
+            // Convert JSON-RPC to MCP request
+            const mcpRequest: MCPRequest = {
+              type: 'tool_call',
+              name: message.method,
+              parameters: message.params || {},
+              request_id: String(message.id)
+            };
+
+            // Handle the message through MCP server
+            this.handleMCPRequest(mcpRequest, async (response) => {
+              // Convert MCP response to JSON-RPC
+              const jsonRpcResponse = {
+                jsonrpc: '2.0' as const,
+                id: message.id,
+                ...(('error' in response)
+                  ? {
+                    error: {
+                      code: -32000,
+                      message: response.error.details.message,
+                      data: response.error
+                    }
+                  }
+                  : { result: response.result }
+                )
+              };
+              await transport.send(jsonRpcResponse);
+            });
+          }
+        };
+
+        transport.onerror = (error) => {
+          this.logger.error('Transport error:', error);
+          if (!res.writableEnded) {
+            res.write(`event: error\ndata: ${JSON.stringify({ error })}\n\n`);
+          }
+        };
+
+        transport.onclose = () => {
+          this.logger.debug('Transport closed');
+          if (!res.writableEnded) {
+            res.write('event: close\ndata: {}\n\n');
+            res.end();
+          }
+        };
+
+        // Start the transport and connect to MCP server
+        await transport.start();
+        await this.mcpServer.connect(transport);
+        this.logger.info('SSE transport connected to MCP server');
+
+        // Send initial connection event with capabilities
+        const connectionEvent = {
+          jsonrpc: '2.0',
+          method: 'connection_established',
+          params: {
+            server_info: {
+              name: 'readwise-mcp',
+              version: '1.0.0',
+              capabilities: {
+                transports: ['sse'],
+                tools: this.toolRegistry.getNames().reduce((acc, name) => ({ ...acc, [name]: true }), {}),
+                prompts: this.promptRegistry.getNames().reduce((acc, name) => ({ ...acc, [name]: true }), {})
+              }
+            }
+          }
+        };
+        res.write(`data: ${JSON.stringify(connectionEvent)}\n\n`);
+
+        // Handle client disconnect
+        req.on('close', () => {
+          this.logger.debug('Client disconnected');
+          transport.close().catch(err => {
+            this.logger.error('Error closing transport:', err);
+          });
+        });
+
+        // Keep connection alive with heartbeats
+        const keepAliveInterval = setInterval(() => {
+          if (!res.writableEnded) {
+            res.write('event: ping\ndata: {}\n\n');
+          }
+        }, 30000);
+
+        // Clean up interval on disconnect
+        req.on('close', () => {
+          clearInterval(keepAliveInterval);
+        });
+
+      } catch (error) {
+        this.logger.error('Error in SSE endpoint:', error);
+        // Only send error response if headers haven't been sent
+        if (!res.headersSent) {
+          res.status(500).json({
+            jsonrpc: '2.0',
+            error: {
+              code: -32603,
+              message: 'Internal server error',
+              data: error instanceof Error ? error.message : String(error)
+            }
+          });
+        }
+      }
+    });
+
+    // Message handling endpoint for client-to-server communication
+    this.app.post('/messages', express.json(), async (req: Request, res: Response) => {
+      try {
+        const transport = new SSEServerTransport('/messages', res);
+        await transport.handlePostMessage(req, res);
+      } catch (error) {
+        this.logger.error('Error handling message:', error);
+        res.status(500).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32603,
+            message: 'Internal error',
+            data: error instanceof Error ? error.message : String(error)
+          }
+        });
+      }
+    });
   }
 } 

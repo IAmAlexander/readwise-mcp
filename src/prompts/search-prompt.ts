@@ -1,8 +1,8 @@
-import { BaseMCPPrompt } from '../mcp/registry/base-prompt';
-import { ReadwiseAPI } from '../api/readwise-api';
-import { SearchParams } from '../types';
-import { ValidationResult, validateRequired, validateNumberRange } from '../types/validation';
-import { Logger } from '../utils/logger';
+import { BaseMCPPrompt } from '../mcp/registry/base-prompt.js';
+import { ReadwiseAPI } from '../api/readwise-api.js';
+import { SearchParams } from '../types/index.js';
+import { ValidationResult, validateRequired, validateNumberRange } from '../types/validation.js';
+import { Logger } from '../utils/logger.js';
 
 /**
  * Parameters for the ReadwiseSearchPrompt

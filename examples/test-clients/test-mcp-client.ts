@@ -11,6 +11,13 @@ import * as fs from 'fs';
  * 3. Testing various tool calls
  */
 
+interface MCPResponse {
+  content: Array<{
+    type: string;
+    text: string;
+  }>;
+}
+
 async function main() {
   console.log('Starting Readwise MCP client test...');
 
@@ -50,50 +57,19 @@ async function main() {
 
     // Test get_books tool
     console.log('\nTesting get_books tool...');
-    const booksResult = await client.callTool({
-      name: 'get_books',
-      arguments: {
-        limit: 3
-      }
-    });
-    if (booksResult.content && booksResult.content[0] && booksResult.content[0].text) {
-      console.log('Books result:', JSON.parse(booksResult.content[0].text));
-    }
+    await testBooks(client);
 
     // Test get_highlights tool
     console.log('\nTesting get_highlights tool...');
-    const highlightsResult = await client.callTool({
-      name: 'get_highlights',
-      arguments: {
-        limit: 3
-      }
-    });
-    if (highlightsResult.content && highlightsResult.content[0] && highlightsResult.content[0].text) {
-      console.log('Highlights result:', JSON.parse(highlightsResult.content[0].text));
-    }
+    await testHighlights(client);
 
     // Test search_highlights tool
     console.log('\nTesting search_highlights tool...');
-    const searchResult = await client.callTool({
-      name: 'search_highlights',
-      arguments: {
-        query: 'programming',
-        limit: 3
-      }
-    });
-    if (searchResult.content && searchResult.content[0] && searchResult.content[0].text) {
-      console.log('Search result:', JSON.parse(searchResult.content[0].text));
-    }
+    await testSearch(client);
 
     // Test get_tags tool
     console.log('\nTesting get_tags tool...');
-    const tagsResult = await client.callTool({
-      name: 'get_tags',
-      arguments: {}
-    });
-    if (tagsResult.content && tagsResult.content[0] && tagsResult.content[0].text) {
-      console.log('Tags result:', JSON.parse(tagsResult.content[0].text));
-    }
+    await testTags(client);
 
     console.log('\nAll tests completed successfully!');
   } catch (error) {
@@ -110,6 +86,53 @@ async function main() {
     
     // Exit the process
     process.exit(0);
+  }
+}
+
+async function testBooks(client: Client) {
+  const booksResult = await client.callTool({
+    name: 'get_books',
+    arguments: {
+      limit: 3
+    }
+  }) as MCPResponse;
+  if (booksResult.content?.[0]?.text) {
+    console.log('Books result:', JSON.parse(booksResult.content[0].text));
+  }
+}
+
+async function testHighlights(client: Client) {
+  const highlightsResult = await client.callTool({
+    name: 'get_highlights',
+    arguments: {
+      limit: 3
+    }
+  }) as MCPResponse;
+  if (highlightsResult.content?.[0]?.text) {
+    console.log('Highlights result:', JSON.parse(highlightsResult.content[0].text));
+  }
+}
+
+async function testSearch(client: Client) {
+  const searchResult = await client.callTool({
+    name: 'search_highlights',
+    arguments: {
+      query: 'programming',
+      limit: 3
+    }
+  }) as MCPResponse;
+  if (searchResult.content?.[0]?.text) {
+    console.log('Search result:', JSON.parse(searchResult.content[0].text));
+  }
+}
+
+async function testTags(client: Client) {
+  const tagsResult = await client.callTool({
+    name: 'get_tags',
+    arguments: {}
+  }) as MCPResponse;
+  if (tagsResult.content?.[0]?.text) {
+    console.log('Tags result:', JSON.parse(tagsResult.content[0].text));
   }
 }
 

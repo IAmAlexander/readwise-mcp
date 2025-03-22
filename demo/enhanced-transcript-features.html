@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Readwise MCP - Enhanced Transcript Features</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .panel {
+            flex: 1;
+            min-width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .transcript-container {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .transcript-segment {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: flex-start;
+            transition: background-color 0.2s;
+        }
+        .transcript-segment:hover {
+            background-color: #f5f5f5;
+        }
+        .transcript-segment.active {
+            background-color: #e3f2fd;
+        }
+        .timestamp {
+            min-width: 80px;
+            color: #666;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        .timestamp:hover {
+            color: #1976d2;
+            text-decoration: underline;
+        }
+        .content {
+            flex: 1;
+            margin-left: 10px;
+        }
+        .speaker {
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 5px;
+        }
+        .text {
+            margin: 5px 0;
+        }
+        .confidence {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 5px;
+        }
+        .search-container {
+            margin-bottom: 15px;
+        }
+        .search-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .search-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .search-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .navigation-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .navigation-button {
+            padding: 8px 15px;
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .navigation-button:hover {
+            background-color: #1565c0;
+        }
+        .navigation-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .highlight {
+            background-color: #fffde7;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+        .error {
+            color: #d32f2f;
+            background-color: #ffebee;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #388e3c;
+            background-color: #e8f5e9;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>Readwise MCP - Enhanced Transcript Features</h1>
+    
+    <div id="auth-panel" class="panel">
+        <h2>Authentication</h2>
+        <div class="form-group">
+            <label for="api-token">Readwise API Token:</label>
+            <input type="password" id="api-token" placeholder="Enter your Readwise API token">
+        </div>
+        <button id="auth-button">Authenticate</button>
+        <div id="auth-status"></div>
+    </div>
+
+    <div id="main-content" class="hidden">
+        <div class="panel">
+            <h2>Transcript Search</h2>
+            <div class="search-container">
+                <input type="text" id="search-input" class="search-input" placeholder="Search in transcript...">
+                <div class="search-options">
+                    <label class="search-option">
+                        <input type="checkbox" id="case-sensitive"> Case sensitive
+                    </label>
+                    <label class="search-option">
+                        <input type="checkbox" id="whole-word"> Whole word
+                    </label>
+                </div>
+                <div class="navigation-controls">
+                    <button id="prev-match" class="navigation-button" disabled>Previous</button>
+                    <button id="next-match" class="navigation-button" disabled>Next</button>
+                    <span id="match-count"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Transcript</h2>
+            <div id="transcript-container" class="transcript-container">
+                <div class="loading">Select a video to view transcript</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:3000';
+        let apiToken = '';
+        let currentTranscript = null;
+        let currentSearchIndex = -1;
+        let searchMatches = [];
+
+        // DOM Elements
+        const authPanel = document.getElementById('auth-panel');
+        const mainContent = document.getElementById('main-content');
+        const authStatus = document.getElementById('auth-status');
+        const transcriptContainer = document.getElementById('transcript-container');
+        const searchInput = document.getElementById('search-input');
+        const caseSensitiveCheckbox = document.getElementById('case-sensitive');
+        const wholeWordCheckbox = document.getElementById('whole-word');
+        const prevMatchButton = document.getElementById('prev-match');
+        const nextMatchButton = document.getElementById('next-match');
+        const matchCount = document.getElementById('match-count');
+
+        // Authentication
+        document.getElementById('auth-button').addEventListener('click', async () => {
+            const token = document.getElementById('api-token').value.trim();
+            if (!token) {
+                showError('Please enter your API token');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/status`, {
+                    headers: {
+                        'Authorization': `Token ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    apiToken = token;
+                    authPanel.classList.add('hidden');
+                    mainContent.classList.remove('hidden');
+                    showSuccess('Authentication successful');
+                } else {
+                    showError('Authentication failed');
+                }
+            } catch (error) {
+                showError('Error during authentication: ' + error.message);
+            }
+        });
+
+        // Search functionality
+        searchInput.addEventListener('input', performSearch);
+        caseSensitiveCheckbox.addEventListener('change', performSearch);
+        wholeWordCheckbox.addEventListener('change', performSearch);
+
+        function performSearch() {
+            if (!currentTranscript) return;
+
+            const query = searchInput.value.trim();
+            if (!query) {
+                clearSearch();
+                return;
+            }
+
+            const options = {
+                caseSensitive: caseSensitiveCheckbox.checked,
+                wholeWord: wholeWordCheckbox.checked
+            };
+
+            searchMatches = [];
+            currentTranscript.forEach((segment, index) => {
+                const text = segment.text;
+                const matches = findMatches(text, query, options);
+                if (matches.length > 0) {
+                    searchMatches.push({ segmentIndex: index, matches });
+                }
+            });
+
+            updateSearchUI();
+        }
+
+        function findMatches(text, query, options) {
+            const regex = new RegExp(
+                options.wholeWord ? `\\b${escapeRegExp(query)}\\b` : escapeRegExp(query),
+                options.caseSensitive ? 'g' : 'gi'
+            );
+            const matches = [];
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                matches.push({
+                    start: match.index,
+                    end: match.index + match[0].length
+                });
+            }
+            return matches;
+        }
+
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function updateSearchUI() {
+            if (searchMatches.length === 0) {
+                clearSearch();
+                return;
+            }
+
+            currentSearchIndex = 0;
+            updateMatchCount();
+            updateNavigationButtons();
+            highlightCurrentMatch();
+        }
+
+        function clearSearch() {
+            searchMatches = [];
+            currentSearchIndex = -1;
+            matchCount.textContent = '';
+            prevMatchButton.disabled = true;
+            nextMatchButton.disabled = true;
+            clearHighlights();
+        }
+
+        function updateMatchCount() {
+            matchCount.textContent = `${currentSearchIndex + 1} of ${searchMatches.length} matches`;
+        }
+
+        function updateNavigationButtons() {
+            prevMatchButton.disabled = currentSearchIndex <= 0;
+            nextMatchButton.disabled = currentSearchIndex >= searchMatches.length - 1;
+        }
+
+        function highlightCurrentMatch() {
+            clearHighlights();
+            if (currentSearchIndex >= 0 && currentSearchIndex < searchMatches.length) {
+                const match = searchMatches[currentSearchIndex];
+                const segment = currentTranscript[match.segmentIndex];
+                const text = segment.text;
+                const matchObj = match.matches[0];
+                
+                const highlightedText = text.substring(0, matchObj.start) +
+                    `<span class="highlight">${text.substring(matchObj.start, matchObj.end)}</span>` +
+                    text.substring(matchObj.end);
+
+                const segmentElement = transcriptContainer.children[match.segmentIndex];
+                segmentElement.querySelector('.text').innerHTML = highlightedText;
+                segmentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function clearHighlights() {
+            if (!currentTranscript) return;
+            currentTranscript.forEach((segment, index) => {
+                const segmentElement = transcriptContainer.children[index];
+                if (segmentElement) {
+                    segmentElement.querySelector('.text').textContent = segment.text;
+                }
+            });
+        }
+
+        // Navigation
+        prevMatchButton.addEventListener('click', () => {
+            if (currentSearchIndex > 0) {
+                currentSearchIndex--;
+                updateMatchCount();
+                updateNavigationButtons();
+                highlightCurrentMatch();
+            }
+        });
+
+        nextMatchButton.addEventListener('click', () => {
+            if (currentSearchIndex < searchMatches.length - 1) {
+                currentSearchIndex++;
+                updateMatchCount();
+                updateNavigationButtons();
+                highlightCurrentMatch();
+            }
+        });
+
+        // Utility functions
+        function showError(message) {
+            authStatus.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        function showSuccess(message) {
+            authStatus.innerHTML = `<div class="success">${message}</div>`;
+        }
+
+        function formatTimestamp(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const remainingSeconds = Math.floor(seconds % 60);
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        function renderTranscript(transcript) {
+            currentTranscript = transcript;
+            transcriptContainer.innerHTML = transcript.map(segment => `
+                <div class="transcript-segment">
+                    <div class="timestamp">${formatTimestamp(segment.start)}</div>
+                    <div class="content">
+                        ${segment.speaker ? `<div class="speaker">${segment.speaker}</div>` : ''}
+                        <div class="text">${segment.text}</div>
+                        ${segment.confidence ? `<div class="confidence">Confidence: ${(segment.confidence * 100).toFixed(1)}%</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
