@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/iamalexander-readwise-mcp-badge.png)](https://mseep.ai/app/iamalexander-readwise-mcp)
+
 # Readwise MCP Server
 
 A Model Context Protocol (MCP) server for accessing and interacting with your Readwise library.
