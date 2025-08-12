@@ -2,7 +2,7 @@ import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
 import { CreateHighlightParams, Highlight, MCPToolResult, isAPIError } from '../types/index.js';
 import { ValidationResult, validateRequired, validateNumberRange, validateArray } from '../types/validation.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
 
 /**
  * Tool for creating new highlights
@@ -61,8 +61,6 @@ export class CreateHighlightTool extends BaseMCPTool<CreateHighlightParams, High
   
   /**
    * Create a new CreateHighlightTool
-   * @param api - The ReadwiseAPI instance to use
-   * @param logger - The logger instance
    */
   constructor(private api: ReadwiseAPI, logger: Logger) {
     super(logger);
@@ -70,8 +68,6 @@ export class CreateHighlightTool extends BaseMCPTool<CreateHighlightParams, High
   
   /**
    * Validate the parameters
-   * @param params - The parameters to validate
-   * @returns Validation result
    */
   validate(params: CreateHighlightParams): ValidationResult {
     const validations = [
@@ -95,7 +91,7 @@ export class CreateHighlightTool extends BaseMCPTool<CreateHighlightParams, High
     
     // Check each validation result
     for (const validation of validations) {
-      if (!validation.success) {
+      if (!validation.valid) {
         return validation;
       }
     }
@@ -106,17 +102,15 @@ export class CreateHighlightTool extends BaseMCPTool<CreateHighlightParams, High
   
   /**
    * Execute the tool
-   * @param params - The parameters for the request
-   * @returns Promise resolving to an object with a result property containing the created highlight
    */
   async execute(params: CreateHighlightParams): Promise<MCPToolResult<Highlight>> {
     try {
-      this.logger.debug('Executing create_highlight tool', params);
+      this.logger.debug('Executing create_highlight tool', params as any);
       const highlight = await this.api.createHighlight(params);
       this.logger.debug(`Created highlight in book ${params.book_id}`);
       return { result: highlight };
     } catch (error) {
-      this.logger.error('Error executing create_highlight tool', error);
+      this.logger.error('Error executing create_highlight tool', error as any);
       
       // Re-throw API errors
       if (isAPIError(error)) {

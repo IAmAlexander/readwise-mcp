@@ -1,7 +1,7 @@
 import { ValidationResult, validateRequired, validateArray, combineValidationResults, validationError } from '../types/validation.js';
 import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
 import { BulkTagRequest, BulkTagResponse, MCPToolResult } from '../types/index.js';
 
 /**
@@ -113,7 +113,7 @@ export class BulkTagsTool extends BaseMCPTool<BulkTagsParams, BulkTagResponse> {
       this.logger.debug('Executing bulk_tags tool', { 
         documentCount: params.document_ids.length,
         tagCount: params.tags.length
-      });
+      } as any);
       
       const result = await this.api.bulkTagDocuments({
         document_ids: params.document_ids,
@@ -125,7 +125,7 @@ export class BulkTagsTool extends BaseMCPTool<BulkTagsParams, BulkTagResponse> {
       this.logger.debug(`Successfully performed bulk tag operation on ${result.updated_documents} documents`);
       return { result };
     } catch (error: unknown) {
-      this.logger.error('Error executing bulk_tags tool', error);
+      this.logger.error('Error executing bulk_tags tool', error as any);
       return {
         result: { success: false, updated_documents: 0 },
         success: false,

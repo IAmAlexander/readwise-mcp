@@ -4,7 +4,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "./dist",
-    "rootDir": ".",
+    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -32,11 +32,15 @@
     "experimentalSpecifierResolution": "node"
   },
   "include": [
-    "src/**/*",
-    "test-scripts/**/*"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "tests",
+    "test-scripts",
+    "src/fixed-server.ts",
+    "src/fixed-server-deploy.ts",
+    "src/run-fixed-server.ts"
   ]
 }

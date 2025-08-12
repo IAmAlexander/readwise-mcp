@@ -1,7 +1,7 @@
 // Runtime imports
 import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
 import { validateNumberRange } from '../types/validation.js';
 import { isAPIError } from '../types/guards.js';
 
@@ -75,7 +75,7 @@ export class GetBooksTool extends BaseMCPTool<GetBooksParams, PaginatedResponse<
       return super.validate(params);
     }
     
-    const validations = [];
+    const validations: ValidationResult[] = [];
     
     // Only validate page if provided
     if (params.page !== undefined) {
@@ -94,7 +94,7 @@ export class GetBooksTool extends BaseMCPTool<GetBooksParams, PaginatedResponse<
     
     // Check each validation result
     for (const validation of validations) {
-      if (validation && !validation.success) {
+      if (validation && !validation.valid) {
         return validation;
       }
     }
@@ -110,7 +110,7 @@ export class GetBooksTool extends BaseMCPTool<GetBooksParams, PaginatedResponse<
    */
   async execute(params: GetBooksParams): Promise<MCPToolResult<PaginatedResponse<Book>>> {
     try {
-      this.logger.debug('Executing get_books tool', params);
+      this.logger.debug('Executing get_books tool', params as any);
       const books = await this.api.getBooks({
         page: params.page,
         page_size: params.page_size
@@ -118,13 +118,13 @@ export class GetBooksTool extends BaseMCPTool<GetBooksParams, PaginatedResponse<
       this.logger.debug(`Retrieved ${books.results.length} books`);
       return { result: books };
     } catch (error) {
-      this.logger.error('Error executing get_books tool', error);
+      this.logger.error('Error executing get_books tool', error as any);
       
       if (isAPIError(error)) {
         throw error;
       }
       
-      this.logger.error('Error fetching books from Readwise API', { error });
+      this.logger.error('Error fetching books from Readwise API', { error } as any);
       return {
         result: { count: 0, next: null, previous: null, results: [] },
         success: false,

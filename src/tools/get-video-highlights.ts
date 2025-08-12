@@ -1,7 +1,7 @@
 import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
-import { Logger } from '../utils/logger.js';
-import { VideoHighlightsResponse } from '../types/index.js';
+import type { Logger } from '../utils/logger-interface.js';
+import { VideoHighlightsResponse, MCPToolResult, isAPIError } from '../types/index.js';
 import { validationError, combineValidationResults } from '../types/validation.js';
 
 export class GetVideoHighlightsTool extends BaseMCPTool<{ document_id: string }, VideoHighlightsResponse> {
@@ -23,27 +23,25 @@ export class GetVideoHighlightsTool extends BaseMCPTool<{ document_id: string },
   }
 
   validate(params: { document_id: string }) {
-    const validations = [];
+    const validations = [] as ReturnType<typeof validationError>[];
 
     if (!params.document_id) {
       validations.push(validationError('document_id', 'Document ID is required'));
     }
 
-    return combineValidationResults(validations);
+    return combineValidationResults(validations as any);
   }
 
-  async execute(params: { document_id: string }) {
+  async execute(params: { document_id: string }): Promise<MCPToolResult<VideoHighlightsResponse>> {
     try {
-      this.logger.debug('Getting video highlights for document:', params.document_id);
+      this.logger.debug('Getting video highlights for document:', params.document_id as any);
       const result = await this.api.getVideoHighlights(params.document_id);
-      this.logger.debug('Successfully retrieved video highlights:', result);
+      this.logger.debug('Successfully retrieved video highlights:', result as any);
       return { result };
     } catch (error) {
-      this.logger.error('Error getting video highlights:', error);
-      if (error instanceof Error) {
-        throw new Error(`Failed to get video highlights: ${error.message}`);
-      }
-      throw error;
+      this.logger.error('Error getting video highlights:', error as any);
+      if (isAPIError(error)) throw error;
+      return { result: { count: 0, results: [] }, success: false, error: 'Failed to get video highlights' };
     }
   }
 } 

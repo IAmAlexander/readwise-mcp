@@ -1,36 +1,26 @@
-import { Tool, MCPResponse, ValidationResult } from '../mcp/types';
-import { Logger } from '../utils/logger';
-import { toMCPResponse } from '../utils/response';
+import type { Logger } from '../utils/logger-interface.js';
+import { toMCPResponse } from '../utils/response.js';
+import type { MCPResponse, ValidationResult } from '../mcp/types.js';
 
-export abstract class BaseTool implements Tool {
-  name: string;
-  description: string;
-  protected logger: Logger;
+export abstract class BaseMCPTool<TParams, TResult> {
+  abstract readonly name: string;
+  abstract readonly description: string;
+  abstract readonly parameters: Record<string, any>;
 
-  constructor(name: string, description: string, logger: Logger) {
-    this.name = name;
-    this.description = description;
+  protected readonly logger: Logger;
+
+  constructor(logger: Logger) {
     this.logger = logger;
   }
 
-  abstract validate(parameters: any): ValidationResult;
-  
-  abstract executeInternal(parameters: any): Promise<any>;
+  validate(_params: TParams): ValidationResult {
+    return { valid: true, errors: [], success: true } as any;
+  }
 
-  async execute(parameters: any): Promise<MCPResponse> {
-    try {
-      const result = await this.executeInternal(parameters);
-      return toMCPResponse(result);
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      this.logger.error(`Error executing ${this.name}:`, error);
-      return {
-        content: [{
-          type: 'text',
-          text: `Error executing ${this.name}: ${error.message}`
-        }],
-        isError: true
-      };
-    }
+  abstract execute(params: TParams): Promise<{ result: TResult }>;
+
+  async executeAsMCP(params: TParams): Promise<MCPResponse> {
+    const result = await this.execute(params);
+    return toMCPResponse(result.result as any);
   }
 } 

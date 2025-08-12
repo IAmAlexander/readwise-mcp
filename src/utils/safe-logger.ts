@@ -1,4 +1,4 @@
-import { Logger, LogLevel, LogContext } from './logger-interface';
+import { Logger, LogLevel, LogContext } from './logger-interface.js';
 
 /**
  * Logger options
@@ -63,7 +63,7 @@ export class SafeLogger implements Logger {
     return levels.indexOf(level) >= levels.indexOf(this.level);
   }
   
-  private formatMessage(level: LogLevel, message: string, context?: LogContext | Error): string {
+  private formatMessage(level: LogLevel, message: string, context?: unknown): string {
     const parts: string[] = [];
 
     // Add timestamp
@@ -83,18 +83,22 @@ export class SafeLogger implements Logger {
     parts.push(message);
 
     // Add context
-    if (context) {
+    if (context !== undefined) {
       if (context instanceof Error) {
         parts.push(context.stack || context.message);
       } else {
-        parts.push(JSON.stringify(context, null, 2));
+        try {
+          parts.push(typeof context === 'string' ? context : JSON.stringify(context, null, 2));
+        } catch {
+          parts.push(String(context));
+        }
       }
     }
 
     return parts.join(' ');
   }
   
-  private logMessage(level: LogLevel, message: string, context?: LogContext | Error): void {
+  private logMessage(level: LogLevel, message: string, context?: unknown): void {
     if (this.shouldLog(level)) {
       const formattedMessage = this.formatMessage(level, message, context);
       this.transport(formattedMessage);
@@ -103,38 +107,29 @@ export class SafeLogger implements Logger {
   
   /**
    * Log a debug message
-   * @param message - The message to log
-   * @param context - Optional log context
    */
-  public debug(message: string, context?: LogContext | Error): void {
+  public debug(message: string, context?: unknown): void {
     this.logMessage(LogLevel.DEBUG, message, context);
   }
   
   /**
    * Log an info message
-   * @param message - The message to log
-   * @param context - Optional log context
    */
-  public info(message: string, context?: LogContext | Error): void {
+  public info(message: string, context?: unknown): void {
     this.logMessage(LogLevel.INFO, message, context);
   }
   
   /**
    * Log a warning message
-   * @param message - The message to log
-   * @param context - Optional log context
    */
-  public warn(message: string, context?: LogContext | Error): void {
+  public warn(message: string, context?: unknown): void {
     this.logMessage(LogLevel.WARN, message, context);
   }
   
   /**
    * Log an error message
-   * @param message - The message to log
-   * @param error - Optional error object
-   * @param context - Optional log context
    */
-  public error(message: string, context?: Error | LogContext): void {
+  public error(message: string, context?: unknown): void {
     this.logMessage(LogLevel.ERROR, message, context);
   }
 }

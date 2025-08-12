@@ -1,9 +1,8 @@
 import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
-import { Logger } from '../utils/logger.js';
-import { GetVideosParams, VideoResponse } from '../types/index.js';
+import type { Logger } from '../utils/logger-interface.js';
+import { GetVideosParams, VideoResponse, MCPToolResult } from '../types/index.js';
 import { ValidationResult, validationSuccess, validationError, combineValidationResults } from '../types/validation.js';
-import { MCPToolResult } from '../types/index.js';
 
 export class GetVideosTool extends BaseMCPTool<GetVideosParams, VideoResponse> {
   readonly name = 'get_videos';
@@ -57,12 +56,12 @@ export class GetVideosTool extends BaseMCPTool<GetVideosParams, VideoResponse> {
 
   async execute(params: GetVideosParams): Promise<MCPToolResult<VideoResponse>> {
     try {
-      this.logger.debug('Getting videos', { params });
+      this.logger.debug('Getting videos', { params } as any);
       const result = await this.api.getVideos(params);
-      this.logger.debug('Got videos', { count: result.count });
+      this.logger.debug('Got videos', { count: result.count } as any);
       return { result };
     } catch (error) {
-      this.logger.error('Error getting videos', { error });
+      this.logger.error('Error getting videos', { error } as any);
       throw error;
     }
   }

@@ -2,7 +2,7 @@ import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
 import { Document, PaginatedResponse, MCPToolResult, isAPIError } from '../types/index.js';
 import { ValidationResult, validateNumberRange } from '../types/validation.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
 
 /**
  * Parameters for the GetDocumentsTool
@@ -52,8 +52,6 @@ export class GetDocumentsTool extends BaseMCPTool<GetDocumentsParams, PaginatedR
   
   /**
    * Create a new GetDocumentsTool
-   * @param api - The ReadwiseAPI instance to use
-   * @param logger - The logger instance
    */
   constructor(private api: ReadwiseAPI, logger: Logger) {
     super(logger);
@@ -61,8 +59,6 @@ export class GetDocumentsTool extends BaseMCPTool<GetDocumentsParams, PaginatedR
   
   /**
    * Validate the parameters
-   * @param params - The parameters to validate
-   * @returns Validation result
    */
   validate(params: GetDocumentsParams): ValidationResult {
     // Nothing to validate if no parameters provided
@@ -70,7 +66,7 @@ export class GetDocumentsTool extends BaseMCPTool<GetDocumentsParams, PaginatedR
       return super.validate(params);
     }
     
-    const validations = [];
+    const validations: ValidationResult[] = [];
     
     // Only validate page if provided
     if (params.page !== undefined) {
@@ -89,7 +85,7 @@ export class GetDocumentsTool extends BaseMCPTool<GetDocumentsParams, PaginatedR
     
     // Check each validation result
     for (const validation of validations) {
-      if (validation && !validation.success) {
+      if (validation && !validation.valid) {
         return validation;
       }
     }
@@ -100,17 +96,15 @@ export class GetDocumentsTool extends BaseMCPTool<GetDocumentsParams, PaginatedR
   
   /**
    * Execute the tool
-   * @param params - The parameters for the request
-   * @returns Promise resolving to an object with a result property containing documents
    */
   async execute(params: GetDocumentsParams): Promise<MCPToolResult<PaginatedResponse<Document>>> {
     try {
-      this.logger.debug('Executing get_documents tool', params);
+      this.logger.debug('Executing get_documents tool', params as any);
       const documents = await this.api.getDocuments(params);
       this.logger.debug(`Retrieved ${documents.results.length} documents`);
       return { result: documents };
     } catch (error) {
-      this.logger.error('Error executing get_documents tool', error);
+      this.logger.error('Error executing get_documents tool', error as any);
       
       // Re-throw API errors
       if (isAPIError(error)) {

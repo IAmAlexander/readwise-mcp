@@ -1,7 +1,7 @@
 import { ValidationResult } from '../types/validation.js';
 import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
 import { TagResponse, MCPToolResult } from '../types/index.js';
 
 /**
@@ -56,7 +56,7 @@ export class GetTagsTool extends BaseMCPTool<void, TagResponse> {
       this.logger.debug(`Retrieved ${tags.count} tags`);
       return { result: tags };
     } catch (error) {
-      this.logger.error('Error executing get_tags tool', error);
+      this.logger.error('Error executing get_tags tool', error as any);
       return {
         result: { count: 0, tags: [] },
         success: false,

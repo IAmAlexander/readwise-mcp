@@ -1,7 +1,7 @@
 import { ValidationResult, validateRequired, validateArray, combineValidationResults } from '../types/validation.js';
 import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
 import { DocumentTagsResponse, MCPToolResult } from '../types/index.js';
 
 /**
@@ -113,7 +113,7 @@ export class DocumentTagsTool extends BaseMCPTool<DocumentTagsParams, DocumentTa
    */
   async execute(params: DocumentTagsParams): Promise<MCPToolResult<DocumentTagsResponse>> {
     try {
-      this.logger.debug('Executing document_tags tool', { params });
+      this.logger.debug('Executing document_tags tool', { params } as any);
       
       let result: DocumentTagsResponse;
       
@@ -140,7 +140,7 @@ export class DocumentTagsTool extends BaseMCPTool<DocumentTagsParams, DocumentTa
       this.logger.debug(`Successfully performed ${params.operation} operation on document tags`);
       return { result };
     } catch (error: unknown) {
-      this.logger.error('Error executing document_tags tool', error);
+      this.logger.error('Error executing document_tags tool', error as any);
       return {
         result: { document_id: params.document_id, tags: [] },
         success: false,

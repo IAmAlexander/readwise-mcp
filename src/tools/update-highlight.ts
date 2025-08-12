@@ -2,7 +2,7 @@ import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
 import { UpdateHighlightParams, Highlight, MCPToolResult, isAPIError } from '../types/index.js';
 import { ValidationResult, validateRequired, validateNumberRange, validateArray } from '../types/validation.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
 
 /**
  * Tool for updating existing highlights
@@ -61,8 +61,6 @@ export class UpdateHighlightTool extends BaseMCPTool<UpdateHighlightParams, High
   
   /**
    * Create a new UpdateHighlightTool
-   * @param api - The ReadwiseAPI instance to use
-   * @param logger - The logger instance
    */
   constructor(private api: ReadwiseAPI, logger: Logger) {
     super(logger);
@@ -70,8 +68,6 @@ export class UpdateHighlightTool extends BaseMCPTool<UpdateHighlightParams, High
   
   /**
    * Validate the parameters
-   * @param params - The parameters to validate
-   * @returns Validation result
    */
   validate(params: UpdateHighlightParams): ValidationResult {
     const validations = [
@@ -94,7 +90,7 @@ export class UpdateHighlightTool extends BaseMCPTool<UpdateHighlightParams, High
     
     // Check each validation result
     for (const validation of validations) {
-      if (!validation.success) {
+      if (!validation.valid) {
         return validation;
       }
     }
@@ -105,17 +101,15 @@ export class UpdateHighlightTool extends BaseMCPTool<UpdateHighlightParams, High
   
   /**
    * Execute the tool
-   * @param params - The parameters for the request
-   * @returns Promise resolving to an object with a result property containing the updated highlight
    */
   async execute(params: UpdateHighlightParams): Promise<MCPToolResult<Highlight>> {
     try {
-      this.logger.debug('Executing update_highlight tool', params);
+      this.logger.debug('Executing update_highlight tool', params as any);
       const highlight = await this.api.updateHighlight(params);
       this.logger.debug(`Updated highlight ${params.highlight_id}`);
       return { result: highlight };
     } catch (error) {
-      this.logger.error('Error executing update_highlight tool', error);
+      this.logger.error('Error executing update_highlight tool', error as any);
       
       // Re-throw API errors
       if (isAPIError(error)) {

@@ -22,7 +22,7 @@ import { BaseMCPTool } from './mcp/registry/base-tool.js';
 import { BaseMCPPrompt } from './mcp/registry/base-prompt.js';
 import { ToolRegistry } from './mcp/registry/tool-registry.js';
 import { PromptRegistry } from './mcp/registry/prompt-registry.js';
-import { Logger } from './utils/logger.js';
+import type { Logger } from './utils/logger-interface.js';
 import { getConfig } from './utils/config.js';
 
 // Tool imports - need .js extension
@@ -484,65 +484,46 @@ export class ReadwiseMCPServer {
     }
     
     // Validate parameters
-    const validationResult = tool.validate(parameters);
+    const validationResult = tool.validate ? tool.validate(parameters) : { valid: true, success: true, errors: [] };
     
-    if (!validationResult.success) {
-      this.logger.warn(`Invalid parameters for tool ${name}`, validationResult.errors);
-      
-      // Convert validation errors to string messages
-      const errorMessages = validationResult.errors?.map(
-        (err: ValidationError) => `${err.field}: ${err.message}`
-      );
-      
-      // Return error
-      callback({
+    if (!validationResult.valid) {
+      this.logger.warn(`Invalid parameters for tool ${name}`, { errors: validationResult.errors } as any);
+      const errorResponse: ErrorResponse = {
         error: {
-          type: 'validation',
+          type: 'validation' as ErrorType,
           details: {
             code: 'invalid_parameters',
-            message: errorMessages?.join(', ') || 'Invalid parameters',
-            errors: errorMessages
+            message: 'Invalid parameters',
+            errors: validationResult.errors.map(e => `${e.field}: ${e.message}`)
           }
         },
-        request_id
-      });
+        request_id: request.request_id
+      };
+      callback(errorResponse);
       return;
     }
     
     // Execute the tool
-    tool.execute(parameters)
-      .then((result) => {
+    (typeof (tool as any).executeAsMCP === 'function' ? (tool as any).executeAsMCP(parameters) : tool.execute(parameters))
+      .then((result: any) => {
         this.logger.debug(`Tool ${name} execution successful`);
         
-        // Return the result with request_id
-        callback({
-          result,
-          request_id
-        });
+        const response: MCPResponse = (result as any).content ? (result as any) : { content: [{ type: 'text', text: JSON.stringify(result) }] };
+        callback({ ...response, request_id: request.request_id });
       })
-      .catch((error) => {
-        this.logger.error(`Error executing tool ${name}`, error);
-        
-        // Check if the error is already in the expected format
-        if (error && typeof error === 'object' && 'type' in error) {
-          callback({
-            error: error as any,
-            request_id
-          });
-          return;
-        }
-        
-        // Return error
-        callback({
+      .catch((error: unknown) => {
+        this.logger.error(`Tool ${name} execution error`, error as any);
+        const errorResponse: ErrorResponse = {
           error: {
-            type: 'transport',
+            type: 'execution' as ErrorType,
             details: {
-              code: 'execution_error',
-              message: error instanceof Error ? error.message : 'Error executing tool'
+              code: 'tool_error',
+              message: error instanceof Error ? error.message : 'Unknown error'
             }
           },
-          request_id
-        });
+          request_id: request.request_id
+        };
+        callback(errorResponse);
       });
   }
 
@@ -578,65 +559,45 @@ export class ReadwiseMCPServer {
     }
     
     // Validate parameters
-    const validationResult = prompt.validate(parameters);
+    const validationResult = prompt.validate ? prompt.validate(parameters) : { valid: true, success: true, errors: [] };
     
-    if (!validationResult.success) {
-      this.logger.warn(`Invalid parameters for prompt ${name}`, validationResult.errors);
-      
-      // Convert validation errors to string messages
-      const errorMessages = validationResult.errors?.map(
-        (err: ValidationError) => `${err.field}: ${err.message}`
-      );
-      
-      // Return error
-      callback({
+    if (!validationResult.valid) {
+      this.logger.warn(`Invalid parameters for prompt ${name}`, { errors: validationResult.errors } as any);
+      const errorResponse: ErrorResponse = {
         error: {
-          type: 'validation',
+          type: 'validation' as ErrorType,
           details: {
             code: 'invalid_parameters',
-            message: errorMessages?.join(', ') || 'Invalid parameters',
-            errors: errorMessages
+            message: 'Invalid parameters',
+            errors: validationResult.errors.map(e => `${e.field}: ${e.message}`)
           }
         },
-        request_id
-      });
+        request_id: request.request_id
+      };
+      callback(errorResponse);
       return;
     }
     
     // Execute the prompt
     prompt.execute(parameters)
-      .then((result) => {
+      .then((result: any) => {
         this.logger.debug(`Prompt ${name} execution successful`);
-        
-        // Return the result with request_id
-        callback({
-          result,
-          request_id
-        });
+        const response: MCPResponse = (result as any).content ? (result as any) : { content: [{ type: 'text', text: JSON.stringify(result) }] };
+        callback({ ...response, request_id: request.request_id });
       })
-      .catch((error) => {
-        this.logger.error(`Error executing prompt ${name}`, error);
-        
-        // Check if the error is already in the expected format
-        if (error && typeof error === 'object' && 'type' in error) {
-          callback({
-            error: error as any,
-            request_id
-          });
-          return;
-        }
-        
-        // Return error
-        callback({
+      .catch((error: unknown) => {
+        this.logger.error(`Prompt ${name} execution error`, error as any);
+        const errorResponse: ErrorResponse = {
           error: {
-            type: 'transport',
+            type: 'execution' as ErrorType,
             details: {
-              code: 'execution_error',
-              message: error instanceof Error ? error.message : 'Error executing prompt'
+              code: 'prompt_error',
+              message: error instanceof Error ? error.message : 'Unknown error'
             }
           },
-          request_id
-        });
+          request_id: request.request_id
+        };
+        callback(errorResponse);
       });
   }
 

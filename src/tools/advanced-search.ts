@@ -2,7 +2,7 @@ import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
 import { AdvancedSearchParams, AdvancedSearchResult, MCPToolResult, isAPIError } from '../types/index.js';
 import { ValidationResult, validateArray, validateNumberRange, validateAllowedValues } from '../types/validation.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
 
 /**
  * Tool for advanced search with multiple filters and facets
@@ -168,7 +168,7 @@ export class AdvancedSearchTool extends BaseMCPTool<AdvancedSearchParams, Advanc
     
     // Check each validation result
     for (const validation of validations) {
-      if (!validation.success) {
+      if (!validation.valid) {
         return validation;
       }
     }
@@ -184,12 +184,12 @@ export class AdvancedSearchTool extends BaseMCPTool<AdvancedSearchParams, Advanc
    */
   async execute(params: AdvancedSearchParams): Promise<MCPToolResult<AdvancedSearchResult>> {
     try {
-      this.logger.debug('Executing advanced_search tool', params);
+      this.logger.debug('Executing advanced_search tool', params as any);
       const result = await this.api.advancedSearch(params);
       this.logger.debug(`Found ${result.highlights.count} highlights`);
       return { result };
     } catch (error) {
-      this.logger.error('Error executing advanced_search tool', error);
+      this.logger.error('Error executing advanced_search tool', error as any);
       
       // Re-throw API errors
       if (isAPIError(error)) {

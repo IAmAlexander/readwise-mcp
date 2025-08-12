@@ -2,7 +2,7 @@ import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
 import { DeleteHighlightParams, MCPToolResult, isAPIError } from '../types/index.js';
 import { ValidationResult, validateRequired, validateAllowedValues } from '../types/validation.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
 
 /**
  * Tool for deleting highlights
@@ -38,8 +38,6 @@ export class DeleteHighlightTool extends BaseMCPTool<DeleteHighlightParams, { su
   
   /**
    * Create a new DeleteHighlightTool
-   * @param api - The ReadwiseAPI instance to use
-   * @param logger - The logger instance
    */
   constructor(private api: ReadwiseAPI, logger: Logger) {
     super(logger);
@@ -47,8 +45,6 @@ export class DeleteHighlightTool extends BaseMCPTool<DeleteHighlightParams, { su
   
   /**
    * Validate the parameters
-   * @param params - The parameters to validate
-   * @returns Validation result
    */
   validate(params: DeleteHighlightParams): ValidationResult {
     const validations = [
@@ -59,7 +55,7 @@ export class DeleteHighlightTool extends BaseMCPTool<DeleteHighlightParams, { su
     
     // Check each validation result
     for (const validation of validations) {
-      if (!validation.success) {
+      if (!validation.valid) {
         return validation;
       }
     }
@@ -70,17 +66,15 @@ export class DeleteHighlightTool extends BaseMCPTool<DeleteHighlightParams, { su
   
   /**
    * Execute the tool
-   * @param params - The parameters for the request
-   * @returns Promise resolving to an object with a result property containing the deletion result
    */
   async execute(params: DeleteHighlightParams): Promise<MCPToolResult<{ success: boolean }>> {
     try {
-      this.logger.debug('Executing delete_highlight tool', params);
+      this.logger.debug('Executing delete_highlight tool', params as any);
       const result = await this.api.deleteHighlight(params);
       this.logger.debug(`Deleted highlight ${params.highlight_id}`);
       return { result };
     } catch (error) {
-      this.logger.error('Error executing delete_highlight tool', error);
+      this.logger.error('Error executing delete_highlight tool', error as any);
       
       // Re-throw API errors
       if (isAPIError(error)) {

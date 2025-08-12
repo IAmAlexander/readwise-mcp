@@ -1,7 +1,7 @@
 import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
-import { Logger } from '../utils/logger.js';
-import { CreateVideoHighlightParams, VideoHighlight } from '../types/index.js';
+import type { Logger } from '../utils/logger-interface.js';
+import { CreateVideoHighlightParams, VideoHighlight, MCPToolResult, isAPIError } from '../types/index.js';
 import { validationError, combineValidationResults } from '../types/validation.js';
 
 export class CreateVideoHighlightTool extends BaseMCPTool<CreateVideoHighlightParams, VideoHighlight> {
@@ -35,7 +35,7 @@ export class CreateVideoHighlightTool extends BaseMCPTool<CreateVideoHighlightPa
   }
 
   validate(params: CreateVideoHighlightParams) {
-    const validations = [];
+    const validations = [] as ReturnType<typeof validationError>[];
 
     if (!params.document_id) {
       validations.push(validationError('document_id', 'Document ID is required'));
@@ -51,7 +51,7 @@ export class CreateVideoHighlightTool extends BaseMCPTool<CreateVideoHighlightPa
       validations.push(validationError('timestamp', 'Invalid timestamp format. Use "MM:SS" or "HH:MM:SS"'));
     }
 
-    return combineValidationResults(validations);
+    return combineValidationResults(validations as any);
   }
 
   private isValidTimestamp(timestamp: string): boolean {
@@ -59,18 +59,16 @@ export class CreateVideoHighlightTool extends BaseMCPTool<CreateVideoHighlightPa
     return pattern.test(timestamp);
   }
 
-  async execute(params: CreateVideoHighlightParams) {
+  async execute(params: CreateVideoHighlightParams): Promise<MCPToolResult<VideoHighlight>> {
     try {
-      this.logger.debug('Creating video highlight with params:', params);
-      const result = await this.api.createVideoHighlight(params);
-      this.logger.debug('Successfully created video highlight:', result);
+      this.logger.debug('Creating video highlight with params:', params as any);
+      const result = await this.api.createVideoHighlight(params as any);
+      this.logger.debug('Successfully created video highlight:', result as any);
       return { result };
     } catch (error) {
-      this.logger.error('Error creating video highlight:', error);
-      if (error instanceof Error) {
-        throw new Error(`Failed to create video highlight: ${error.message}`);
-      }
-      throw error;
+      this.logger.error('Error creating video highlight:', error as any);
+      if (isAPIError(error)) throw error;
+      return { result: { id: '', document_id: params.document_id, text: params.text, timestamp: params.timestamp }, success: false, error: 'Failed to create video highlight' } as any;
     }
   }
 } 
