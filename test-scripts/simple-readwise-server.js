@@ -1,12 +1,10 @@
 // Simple Readwise MCP server in JavaScript
 // This avoids TypeScript compilation issues while preserving core functionality
 
-import { Server } from '@modelcontextprotocol/sdk/server';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import express from 'express';
 import cors from 'cors';
-import bodyParser from 'body-parser';
 import { createServer } from 'http';
 
 // Global error handling
@@ -71,7 +69,8 @@ async function main() {
     // Create Express app for HTTP server (needed for SSE transport)
     const app = express();
     app.use(cors());
-    app.use(bodyParser.json());
+  // Do not attach a JSON body parser globally; the SSE transport expects to
+  // read the raw request stream in handlePostMessage.
     const httpServer = createServer(app);
     
     // Set up health endpoint
@@ -138,9 +137,9 @@ async function main() {
     
     // Set up the appropriate transport
     if (transportType === 'stdio') {
-      setupStdioTransport(server);
+      await setupStdioTransport(server);
     } else {
-      setupSSETransport(server, app);
+      await setupSSETransport(server, app);
     }
     
     console.error("Server running. Press Ctrl+C to stop");
@@ -153,10 +152,11 @@ async function main() {
 /**
  * Set up stdio transport
  */
-function setupStdioTransport(server) {
+async function setupStdioTransport(server) {
   console.error("Setting up stdio transport...");
   
   try {
+    const { StdioServerTransport } = await import('@modelcontextprotocol/sdk/server/stdio.js');
     const transport = new StdioServerTransport();
     
     server.connect(transport)
@@ -175,86 +175,58 @@ function setupStdioTransport(server) {
 /**
  * Set up SSE transport and endpoints
  */
-function setupSSETransport(server, app) {
+async function setupSSETransport(server, app) {
   console.error("Setting up SSE transport...");
-  
+
+  // Keep a reference to the active SSE transport
+  let sseTransport = null;
+
   // Set up SSE endpoint
-  app.get('/sse', (req, res) => {
+  app.get('/sse', async (req, res) => {
     console.error("New SSE connection");
-    
-    // Set SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.flushHeaders();
-    
+
     try {
-      // Create transport
-      const transport = new SSEServerTransport('/messages', res);
-      
-      // Connect transport to server
-      server.connect(transport)
-        .then(() => {
-          console.error("SSE transport connected successfully");
-          
-          // Keep-alive interval
-          const keepAliveInterval = setInterval(() => {
-            if (!res.writableEnded) {
-              res.write('event: ping\ndata: {}\n\n');
-            } else {
-              clearInterval(keepAliveInterval);
-            }
-          }, 30000);
-          
-          // Handle client disconnect
-          req.on('close', () => {
-            console.error("Client disconnected");
-            clearInterval(keepAliveInterval);
-            transport.close().catch(err => {
-              console.error("Error closing transport:", err);
-            });
-          });
-        })
-        .catch(error => {
-          console.error("Error connecting SSE transport:", error);
-          if (!res.writableEnded) {
-            res.write(`event: error\ndata: ${JSON.stringify({ error: 'Internal server error' })}\n\n`);
-            res.end();
-          }
+      // Close any previous transport
+      if (sseTransport) {
+        try { await sseTransport.close(); } catch {}
+        sseTransport = null;
+      }
+
+      // Create transport and connect
+      sseTransport = new SSEServerTransport('/messages', res);
+      await server.connect(sseTransport);
+      console.error("SSE transport connected successfully");
+
+      // Handle client disconnect
+      req.on('close', () => {
+        console.error("Client disconnected");
+        sseTransport?.close().catch(err => {
+          console.error("Error closing transport:", err);
         });
+        sseTransport = null;
+      });
     } catch (error) {
-      console.error("Error in SSE endpoint:", error);
-      if (!res.writableEnded) {
-        res.write(`event: error\ndata: ${JSON.stringify({ error: 'Internal server error' })}\n\n`);
-        res.end();
+      console.error("Error connecting SSE transport:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Internal server error' });
       }
     }
   });
-  
+
   // Set up messages endpoint for SSE
-  app.post('/messages', (req, res) => {
-    console.error("Received POST message");
-    
-    // Handle the message through SSE transport
+  app.post('/messages', async (req, res) => {
     try {
-      // Find active transport
-      const transport = server._transport;
-      
-      if (!transport || !transport.handlePostMessage) {
-        console.error("No active SSE transport");
-        res.status(500).json({ error: 'No active SSE transport' });
+      if (!sseTransport) {
+        res.status(500).json({ error: 'SSE connection not established' });
         return;
       }
-      
-      // Pass message to transport
-      transport.handlePostMessage(req, res);
+      await sseTransport.handlePostMessage(req, res);
     } catch (error) {
       console.error("Error handling message:", error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
-  
+
   console.error("SSE transport setup complete");
 }
 
