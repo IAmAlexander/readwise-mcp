@@ -2,7 +2,7 @@ import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
 import { CreateNoteParams, Highlight, MCPToolResult, isAPIError } from '../types/index.js';
 import { ValidationResult, validateRequired } from '../types/validation.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
 
 /**
  * Tool for creating notes on highlights
@@ -38,8 +38,6 @@ export class CreateNoteTool extends BaseMCPTool<CreateNoteParams, Highlight> {
   
   /**
    * Create a new CreateNoteTool
-   * @param api - The ReadwiseAPI instance to use
-   * @param logger - The logger instance
    */
   constructor(private api: ReadwiseAPI, logger: Logger) {
     super(logger);
@@ -47,8 +45,6 @@ export class CreateNoteTool extends BaseMCPTool<CreateNoteParams, Highlight> {
   
   /**
    * Validate the parameters
-   * @param params - The parameters to validate
-   * @returns Validation result
    */
   validate(params: CreateNoteParams): ValidationResult {
     const validations = [
@@ -58,7 +54,7 @@ export class CreateNoteTool extends BaseMCPTool<CreateNoteParams, Highlight> {
     
     // Check each validation result
     for (const validation of validations) {
-      if (!validation.success) {
+      if (!validation.valid) {
         return validation;
       }
     }
@@ -69,17 +65,15 @@ export class CreateNoteTool extends BaseMCPTool<CreateNoteParams, Highlight> {
   
   /**
    * Execute the tool
-   * @param params - The parameters for the request
-   * @returns Promise resolving to an object with a result property containing the updated highlight
    */
   async execute(params: CreateNoteParams): Promise<MCPToolResult<Highlight>> {
     try {
-      this.logger.debug('Executing create_note tool', params);
+      this.logger.debug('Executing create_note tool', params as any);
       const highlight = await this.api.createNote(params);
       this.logger.debug(`Created note on highlight ${params.highlight_id}`);
       return { result: highlight };
     } catch (error) {
-      this.logger.error('Error executing create_note tool', error);
+      this.logger.error('Error executing create_note tool', error as any);
       
       // Re-throw API errors
       if (isAPIError(error)) {

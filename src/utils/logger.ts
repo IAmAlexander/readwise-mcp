@@ -1,5 +1,5 @@
-import { LogLevel, type Logger } from './logger-interface';
-import { SafeLogger } from './safe-logger';
+import { LogLevel, type Logger } from './logger-interface.js';
+import { SafeLogger } from './safe-logger.js';
 
 // Create default logger for MCP
 const logger = new SafeLogger({

@@ -1,6 +1,6 @@
-import { Logger } from '../../utils/safe-logger';
+import type { Logger } from '../../utils/logger-interface.js';
 import { ReadwiseAPI } from '../../api/readwise-api.js';
-import { Tool, ValidationResult } from '../types';
+import { Tool } from '../types.js';
 
 /**
  * Registry of MCP tools
@@ -30,12 +30,12 @@ export class ToolRegistry {
    * Register a tool
    * @param tool - The tool to register
    */
-  public register(tool: Tool): void {
+  public register(tool: any): void {
     this.logger.debug(`Registering tool: ${tool.name}`);
     if (this.tools.has(tool.name)) {
       this.logger.warn(`Tool ${tool.name} already registered, overwriting`);
     }
-    this.tools.set(tool.name, tool);
+    this.tools.set(tool.name, tool as unknown as Tool);
   }
   
   /**

@@ -6,7 +6,8 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { ReadwiseMCPServer } from './server.js';
 import { getConfig } from './utils/config.js';
-import { Logger, LogLevel } from './utils/logger.js';
+import { SafeLogger } from './utils/safe-logger.js';
+import { LogLevel } from './utils/logger-interface.js';
 
 // Create an Express app
 const app = express();
@@ -19,9 +20,9 @@ app.use(cors());
 const config = getConfig();
 
 // Create logger instance
-const logger = new Logger({
+const logger = new SafeLogger({
   level: LogLevel.INFO,
-  transport: 'stdout',
+  transport: console.error,
   timestamps: true,
   colors: true
 });
@@ -63,7 +64,7 @@ app.post('/mcp', (req, res) => {
 });
 
 // Start the server
-mcpServer.start().catch(err => logger.error('Failed to start server:', err));
+mcpServer.start().catch(err => logger.error('Failed to start server:', err as any));
 
 // Create a serverless handler
 const handler = serverless(app);
@@ -72,14 +73,14 @@ const handler = serverless(app);
 export const lambdaHandler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  logger.debug('Received event', event);
+  logger.debug('Received event', event as any);
   
   try {
     // Process the event using serverless-http
     const result = await handler(event, {} as any);
     
     if (typeof result === 'object' && result !== null && 'statusCode' in result) {
-      logger.debug('Processed event', { statusCode: (result as any).statusCode });
+      logger.debug('Processed event', { statusCode: (result as any).statusCode } as any);
       return result as APIGatewayProxyResult;
     }
     
@@ -90,7 +91,7 @@ export const lambdaHandler = async (
       })
     };
   } catch (error) {
-    logger.error('Error handling event', error);
+    logger.error('Error handling event', error as any);
     
     return {
       statusCode: 500,

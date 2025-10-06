@@ -12,7 +12,8 @@ import type { ValidationResult } from './types/validation.js';
 // Local imports with implementation - need .js extension
 import { ReadwiseClient } from './api/client.js';
 import { ReadwiseAPI } from './api/readwise-api.js';
-import { Logger, LogLevel } from './utils/logger.js';
+import { SafeLogger } from './utils/safe-logger.js';
+import { LogLevel } from './utils/logger-interface.js';
 import { getConfig, saveConfig } from './utils/config.js';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
@@ -63,10 +64,15 @@ async function main() {
     };
 
   // Create logger
-  const logger = Logger.forTransport(argv.transport, argv.debug);
+  const logger = new SafeLogger({
+    level: argv.debug ? LogLevel.DEBUG : LogLevel.INFO,
+    transport: argv.transport === 'sse' ? console.log : console.error,
+    timestamps: true,
+    colors: true,
+  });
 
   logger.info('Starting Readwise MCP server');
-  logger.debug('Command line arguments:', argv);
+  logger.debug('Command line arguments:', argv as any);
 
   try {
     // Run setup wizard if requested
@@ -120,12 +126,12 @@ async function main() {
     });
     
     process.on('unhandledRejection', (reason) => {
-      logger.error('Unhandled promise rejection', reason);
+      logger.error('Unhandled promise rejection', reason as any);
       shutdown();
     });
     
   } catch (error) {
-    logger.error('Error starting server', error);
+    logger.error('Error starting server', error as any);
     process.exit(1);
   }
 }

@@ -1,7 +1,7 @@
 import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
-import { Logger } from '../utils/logger.js';
-import { UpdateVideoPositionParams, VideoPlaybackPosition } from '../types/index.js';
+import type { Logger } from '../utils/logger-interface.js';
+import { UpdateVideoPositionParams, VideoPlaybackPosition, MCPToolResult, isAPIError } from '../types/index.js';
 import { validationError, combineValidationResults } from '../types/validation.js';
 
 export class UpdateVideoPositionTool extends BaseMCPTool<UpdateVideoPositionParams, VideoPlaybackPosition> {
@@ -33,7 +33,7 @@ export class UpdateVideoPositionTool extends BaseMCPTool<UpdateVideoPositionPara
   }
 
   validate(params: UpdateVideoPositionParams) {
-    const validations = [];
+    const validations = [] as ReturnType<typeof validationError>[];
 
     if (!params.document_id) {
       validations.push(validationError('document_id', 'Document ID is required'));
@@ -51,21 +51,19 @@ export class UpdateVideoPositionTool extends BaseMCPTool<UpdateVideoPositionPara
       validations.push(validationError('position', 'Position cannot be greater than duration'));
     }
 
-    return combineValidationResults(validations);
+    return combineValidationResults(validations as any);
   }
 
-  async execute(params: UpdateVideoPositionParams) {
+  async execute(params: UpdateVideoPositionParams): Promise<MCPToolResult<VideoPlaybackPosition>> {
     try {
-      this.logger.debug('Updating video position with params:', params);
-      const result = await this.api.updateVideoPosition(params);
-      this.logger.debug('Successfully updated video position:', result);
+      this.logger.debug('Updating video position with params:', params as any);
+      const result = await this.api.updateVideoPosition(params as any);
+      this.logger.debug('Successfully updated video position:', result as any);
       return { result };
     } catch (error) {
-      this.logger.error('Error updating video position:', error);
-      if (error instanceof Error) {
-        throw new Error(`Failed to update video position: ${error.message}`);
-      }
-      throw error;
+      this.logger.error('Error updating video position:', error as any);
+      if (isAPIError(error)) throw error;
+      return { result: { document_id: params.document_id, position: params.position || 0, percentage: 0, last_updated: new Date().toISOString() }, success: false, error: 'Failed to update video position' };
     }
   }
 } 

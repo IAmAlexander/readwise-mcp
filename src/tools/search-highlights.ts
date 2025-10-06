@@ -2,7 +2,7 @@ import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
 import { SearchParams, SearchResult, MCPToolResult, isAPIError } from '../types/index.js';
 import { ValidationResult, validateRequired, validateNumberRange } from '../types/validation.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
 
 /**
  * Tool for searching highlights in Readwise
@@ -38,8 +38,6 @@ export class SearchHighlightsTool extends BaseMCPTool<SearchParams, SearchResult
   
   /**
    * Create a new SearchHighlightsTool
-   * @param api - The ReadwiseAPI instance to use
-   * @param logger - The logger instance
    */
   constructor(private api: ReadwiseAPI, logger: Logger) {
     super(logger);
@@ -47,12 +45,10 @@ export class SearchHighlightsTool extends BaseMCPTool<SearchParams, SearchResult
   
   /**
    * Validate the parameters
-   * @param params - The parameters to validate
-   * @returns Validation result
    */
   validate(params: SearchParams): ValidationResult {
     const requiredValidation = validateRequired(params, 'query', 'Search query is required');
-    if (!requiredValidation.success) {
+    if (!requiredValidation.valid) {
       return requiredValidation;
     }
     
@@ -61,17 +57,15 @@ export class SearchHighlightsTool extends BaseMCPTool<SearchParams, SearchResult
   
   /**
    * Execute the tool
-   * @param params - The parameters for the request
-   * @returns Promise resolving to an object with a result property containing search results
    */
   async execute(params: SearchParams): Promise<MCPToolResult<SearchResult[]>> {
     try {
-      this.logger.debug('Executing search_highlights tool', { query: params.query, limit: params.limit });
+      this.logger.debug('Executing search_highlights tool', { query: params.query, limit: params.limit } as any);
       const results = await this.api.searchHighlights(params);
       this.logger.debug(`Found ${results.length} search results`);
       return { result: results };
     } catch (error) {
-      this.logger.error('Error executing search_highlights tool', error);
+      this.logger.error('Error executing search_highlights tool', error as any);
       
       // Re-throw API errors
       if (isAPIError(error)) {

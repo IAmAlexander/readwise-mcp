@@ -2,7 +2,7 @@ import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
 import { GetReadingListParams, ReadingListResponse, MCPToolResult, isAPIError } from '../types/index.js';
 import { ValidationResult, validateNumberRange, validateAllowedValues } from '../types/validation.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
 
 /**
  * Tool for retrieving a list of documents with their reading progress
@@ -49,8 +49,6 @@ export class GetReadingListTool extends BaseMCPTool<GetReadingListParams, Readin
   
   /**
    * Create a new GetReadingListTool
-   * @param api - The ReadwiseAPI instance to use
-   * @param logger - The logger instance
    */
   constructor(private api: ReadwiseAPI, logger: Logger) {
     super(logger);
@@ -58,11 +56,9 @@ export class GetReadingListTool extends BaseMCPTool<GetReadingListParams, Readin
   
   /**
    * Validate the parameters
-   * @param params - The parameters to validate
-   * @returns Validation result
    */
   validate(params: GetReadingListParams): ValidationResult {
-    const validations = [];
+    const validations: ValidationResult[] = [];
     
     // Validate status if provided
     if (params.status) {
@@ -87,7 +83,7 @@ export class GetReadingListTool extends BaseMCPTool<GetReadingListParams, Readin
     
     // Check each validation result
     for (const validation of validations) {
-      if (!validation.success) {
+      if (!validation.valid) {
         return validation;
       }
     }
@@ -98,17 +94,15 @@ export class GetReadingListTool extends BaseMCPTool<GetReadingListParams, Readin
   
   /**
    * Execute the tool
-   * @param params - The parameters for the request
-   * @returns Promise resolving to an object with a result property containing the reading list
    */
   async execute(params: GetReadingListParams): Promise<MCPToolResult<ReadingListResponse>> {
     try {
-      this.logger.debug('Executing get_reading_list tool', params);
+      this.logger.debug('Executing get_reading_list tool', params as any);
       const readingList = await this.api.getReadingList(params);
       this.logger.debug(`Retrieved reading list with ${readingList.count} documents`);
       return { result: readingList };
     } catch (error) {
-      this.logger.error('Error executing get_reading_list tool', error);
+      this.logger.error('Error executing get_reading_list tool', error as any);
       
       // Re-throw API errors
       if (isAPIError(error)) {

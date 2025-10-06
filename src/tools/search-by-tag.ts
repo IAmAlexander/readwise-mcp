@@ -2,7 +2,7 @@ import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
 import { SearchByTagParams, Highlight, MCPToolResult, isAPIError, PaginatedResponse } from '../types/index.js';
 import { ValidationResult, validateRequired, validateArray, validateNumberRange } from '../types/validation.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
 
 /**
  * Tool for searching highlights by tags
@@ -49,8 +49,6 @@ export class SearchByTagTool extends BaseMCPTool<SearchByTagParams, PaginatedRes
   
   /**
    * Create a new SearchByTagTool
-   * @param api - The ReadwiseAPI instance to use
-   * @param logger - The logger instance
    */
   constructor(private api: ReadwiseAPI, logger: Logger) {
     super(logger);
@@ -58,8 +56,6 @@ export class SearchByTagTool extends BaseMCPTool<SearchByTagParams, PaginatedRes
   
   /**
    * Validate the parameters
-   * @param params - The parameters to validate
-   * @returns Validation result
    */
   validate(params: SearchByTagParams): ValidationResult {
     const validations = [
@@ -82,7 +78,7 @@ export class SearchByTagTool extends BaseMCPTool<SearchByTagParams, PaginatedRes
     
     // Check each validation result
     for (const validation of validations) {
-      if (!validation.success) {
+      if (!validation.valid) {
         return validation;
       }
     }
@@ -93,17 +89,15 @@ export class SearchByTagTool extends BaseMCPTool<SearchByTagParams, PaginatedRes
   
   /**
    * Execute the tool
-   * @param params - The parameters for the request
-   * @returns Promise resolving to an object with a result property containing the search results
    */
   async execute(params: SearchByTagParams): Promise<MCPToolResult<PaginatedResponse<Highlight>>> {
     try {
-      this.logger.debug('Executing search_by_tag tool', params);
+      this.logger.debug('Executing search_by_tag tool', params as any);
       const result = await this.api.searchByTags(params);
       this.logger.debug(`Found ${result.count} highlights with specified tags`);
       return { result };
     } catch (error) {
-      this.logger.error('Error executing search_by_tag tool', error);
+      this.logger.error('Error executing search_by_tag tool', error as any);
       
       // Re-throw API errors
       if (isAPIError(error)) {

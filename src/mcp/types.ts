@@ -27,6 +27,8 @@ export interface ToolParameters {
 export interface Tool {
   name: string;
   description: string;
+  // Added: JSON schema for parameters
+  parameters: Record<string, unknown>;
   validate?(parameters: any): ValidationResult;
   execute(parameters: any): Promise<MCPResponse>;
 }
@@ -37,6 +39,8 @@ export interface Tool {
 export interface Prompt {
   name: string;
   description: string;
+  // Added: JSON schema for parameters
+  parameters: Record<string, unknown>;
   validate?(parameters: any): ValidationResult;
   execute(parameters: any): Promise<MCPResponse>;
 }

@@ -2,7 +2,7 @@ import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
 import { GetReadingProgressParams, ReadingProgress, MCPToolResult, isAPIError } from '../types/index.js';
 import { ValidationResult, validateRequired } from '../types/validation.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
 
 /**
  * Tool for retrieving reading progress of a document
@@ -34,8 +34,6 @@ export class GetReadingProgressTool extends BaseMCPTool<GetReadingProgressParams
   
   /**
    * Create a new GetReadingProgressTool
-   * @param api - The ReadwiseAPI instance to use
-   * @param logger - The logger instance
    */
   constructor(private api: ReadwiseAPI, logger: Logger) {
     super(logger);
@@ -43,8 +41,6 @@ export class GetReadingProgressTool extends BaseMCPTool<GetReadingProgressParams
   
   /**
    * Validate the parameters
-   * @param params - The parameters to validate
-   * @returns Validation result
    */
   validate(params: GetReadingProgressParams): ValidationResult {
     const validations = [
@@ -53,7 +49,7 @@ export class GetReadingProgressTool extends BaseMCPTool<GetReadingProgressParams
     
     // Check each validation result
     for (const validation of validations) {
-      if (!validation.success) {
+      if (!validation.valid) {
         return validation;
       }
     }
@@ -64,17 +60,15 @@ export class GetReadingProgressTool extends BaseMCPTool<GetReadingProgressParams
   
   /**
    * Execute the tool
-   * @param params - The parameters for the request
-   * @returns Promise resolving to an object with a result property containing the reading progress
    */
   async execute(params: GetReadingProgressParams): Promise<MCPToolResult<ReadingProgress>> {
     try {
-      this.logger.debug('Executing get_reading_progress tool', params);
+      this.logger.debug('Executing get_reading_progress tool', params as any);
       const progress = await this.api.getReadingProgress(params);
       this.logger.debug(`Retrieved reading progress for document ${params.document_id}`);
       return { result: progress };
     } catch (error) {
-      this.logger.error('Error executing get_reading_progress tool', error);
+      this.logger.error('Error executing get_reading_progress tool', error as any);
       
       // Re-throw API errors
       if (isAPIError(error)) {

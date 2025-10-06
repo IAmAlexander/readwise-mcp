@@ -1,4 +1,4 @@
-import { MCPResponse, MCPContentItem } from '../mcp/types';
+import { MCPResponse, MCPContentItem } from '../mcp/types.js';
 
 /**
  * Convert any value to an MCPResponse

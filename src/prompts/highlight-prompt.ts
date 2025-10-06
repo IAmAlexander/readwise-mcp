@@ -2,7 +2,8 @@ import { BaseMCPPrompt } from '../mcp/registry/base-prompt.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
 import { GetHighlightsParams } from '../types/index.js';
 import { ValidationResult, validateNumberRange, validateAllowedValues, combineValidationResults } from '../types/validation.js';
-import { Logger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger-interface.js';
+import type { MCPResponse } from '../mcp/types.js';
 
 /**
  * Parameters for the ReadwiseHighlightPrompt
@@ -22,15 +23,7 @@ export interface ReadwiseHighlightPromptParams extends GetHighlightsParams {
 /**
  * Prompt for retrieving and analyzing highlights in Readwise
  */
-export class ReadwiseHighlightPrompt extends BaseMCPPrompt<ReadwiseHighlightPromptParams, {
-  messages: Array<{
-    role: string;
-    content: {
-      type: string;
-      text: string;
-    };
-  }>;
-}> {
+export class ReadwiseHighlightPrompt extends BaseMCPPrompt<ReadwiseHighlightPromptParams, MCPResponse> {
   /**
    * The name of the prompt
    */
@@ -103,20 +96,9 @@ export class ReadwiseHighlightPrompt extends BaseMCPPrompt<ReadwiseHighlightProm
   
   /**
    * Execute the prompt
-   * @param params - Parameters for the prompt
-   * @returns A structured response with messages in the format expected by the MCP protocol
-   * @throws Error if the API request fails or if there's an issue with processing the highlights
    */
-  async execute(params: ReadwiseHighlightPromptParams): Promise<{
-    messages: Array<{
-      role: string;
-      content: {
-        type: string;
-        text: string;
-      };
-    }>;
-  }> {
-    this.logger.debug('Executing ReadwiseHighlightPrompt', { params });
+  async execute(params: ReadwiseHighlightPromptParams): Promise<MCPResponse> {
+    this.logger.debug('Executing ReadwiseHighlightPrompt', { params } as any);
     
     try {
       // Fetch highlights from Readwise API
@@ -128,7 +110,7 @@ export class ReadwiseHighlightPrompt extends BaseMCPPrompt<ReadwiseHighlightProm
       });
       
       if (!highlightsResponse.results || highlightsResponse.results.length === 0) {
-        this.logger.warn('No highlights found for the given parameters', { params });
+        this.logger.warn('No highlights found for the given parameters', { params } as any);
         throw new Error('No highlights found. Try different parameters or check your Readwise library.');
       }
       
@@ -166,32 +148,25 @@ export class ReadwiseHighlightPrompt extends BaseMCPPrompt<ReadwiseHighlightProm
       this.logger.debug('Successfully generated prompt from highlights', {
         highlightCount: highlightsResponse.results.length,
         task
-      });
+      } as any);
       
-      // Return structured message array in the format expected by the MCP protocol
+      // Return MCPResponse
       return {
-        messages: [
+        content: [
           {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: messageContent
-            }
+            type: 'text',
+            text: messageContent
           }
         ]
       };
     } catch (error) {
       // Log the error details
-      this.logger.error('Error executing ReadwiseHighlightPrompt', error);
+      this.logger.error('Error executing ReadwiseHighlightPrompt', error as any);
       
-      // Rethrow with a more specific message based on error type
       if (error instanceof Error) {
-        // Check if it's already a formatted error message
         if (error.message.includes('No highlights found')) {
           throw error;
         }
-        
-        // Handle API-specific errors
         if (error.message.includes('401')) {
           throw new Error('Authentication failed. Please check your Readwise API key.');
         } else if (error.message.includes('429')) {
@@ -199,12 +174,8 @@ export class ReadwiseHighlightPrompt extends BaseMCPPrompt<ReadwiseHighlightProm
         } else if (error.message.includes('5')) {
           throw new Error('Readwise service error. Please try again later.');
         }
-        
-        // Generic error with original message
         throw new Error(`Failed to process highlights: ${error.message}`);
       }
-      
-      // Unknown error type
       throw new Error('An unexpected error occurred while processing highlights.');
     }
   }

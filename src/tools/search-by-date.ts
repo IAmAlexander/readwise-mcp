@@ -1,8 +1,8 @@
 import { BaseMCPTool } from '../mcp/registry/base-tool.js';
 import { ReadwiseAPI } from '../api/readwise-api.js';
 import { SearchByDateParams, Highlight, MCPToolResult, isAPIError, PaginatedResponse } from '../types/index.js';
-import { ValidationResult, validateAllowedValues, validateNumberRange } from '../types/validation.js';
-import { Logger } from '../utils/logger.js';
+import { ValidationResult, validateAllowedValues, validateNumberRange, validationError } from '../types/validation.js';
+import type { Logger } from '../utils/logger-interface.js';
 
 /**
  * Tool for searching highlights by date range
@@ -50,8 +50,6 @@ export class SearchByDateTool extends BaseMCPTool<SearchByDateParams, PaginatedR
   
   /**
    * Create a new SearchByDateTool
-   * @param api - The ReadwiseAPI instance to use
-   * @param logger - The logger instance
    */
   constructor(private api: ReadwiseAPI, logger: Logger) {
     super(logger);
@@ -59,13 +57,10 @@ export class SearchByDateTool extends BaseMCPTool<SearchByDateParams, PaginatedR
   
   /**
    * Validate the parameters
-   * @param params - The parameters to validate
-   * @returns Validation result
    */
   validate(params: SearchByDateParams): ValidationResult {
-    const validations = [];
+    const validations: ValidationResult[] = [];
     
-    // Validate date field if provided
     if (params.date_field !== undefined) {
       validations.push(
         validateAllowedValues(
@@ -77,34 +72,20 @@ export class SearchByDateTool extends BaseMCPTool<SearchByDateParams, PaginatedR
       );
     }
     
-    // Validate date format if provided
     if (params.start_date !== undefined) {
       const startDate = new Date(params.start_date);
       if (isNaN(startDate.getTime())) {
-        return {
-          success: false,
-          errors: [{
-            field: 'start_date',
-            message: 'Invalid date format. Use ISO format (e.g. 2024-01-01)'
-          }]
-        };
+        return validationError('start_date', 'Invalid date format. Use ISO format (e.g. 2024-01-01)');
       }
     }
     
     if (params.end_date !== undefined) {
       const endDate = new Date(params.end_date);
       if (isNaN(endDate.getTime())) {
-        return {
-          success: false,
-          errors: [{
-            field: 'end_date',
-            message: 'Invalid date format. Use ISO format (e.g. 2024-12-31)'
-          }]
-        };
+        return validationError('end_date', 'Invalid date format. Use ISO format (e.g. 2024-12-31)');
       }
     }
     
-    // Validate pagination parameters if provided
     if (params.page !== undefined) {
       validations.push(
         validateNumberRange(params, 'page', 1, undefined, 'Page must be a positive number')
@@ -117,37 +98,31 @@ export class SearchByDateTool extends BaseMCPTool<SearchByDateParams, PaginatedR
       );
     }
     
-    // Check each validation result
     for (const validation of validations) {
-      if (!validation.success) {
+      if (!validation.valid) {
         return validation;
       }
     }
     
-    // All validations passed
     return super.validate(params);
   }
   
   /**
    * Execute the tool
-   * @param params - The parameters for the request
-   * @returns Promise resolving to an object with a result property containing the search results
    */
   async execute(params: SearchByDateParams): Promise<MCPToolResult<PaginatedResponse<Highlight>>> {
     try {
-      this.logger.debug('Executing search_by_date tool', params);
+      this.logger.debug('Executing search_by_date tool', params as any);
       const result = await this.api.searchByDate(params);
       this.logger.debug(`Found ${result.count} highlights in date range`);
       return { result };
     } catch (error) {
-      this.logger.error('Error executing search_by_date tool', error);
+      this.logger.error('Error executing search_by_date tool', error as any);
       
-      // Re-throw API errors
       if (isAPIError(error)) {
         throw error;
       }
       
-      // Handle unexpected errors with proper result format
       return {
         result: {
           count: 0,

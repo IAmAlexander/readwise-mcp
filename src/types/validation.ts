@@ -11,6 +11,8 @@ export interface ValidationError {
  */
 export interface ValidationResult {
   valid: boolean;
+  // Added alias for compatibility with existing callers
+  success: boolean;
   errors: ValidationError[];
 }
 
@@ -21,6 +23,7 @@ export interface ValidationResult {
 export function validationSuccess(): ValidationResult {
   return {
     valid: true,
+    success: true,
     errors: []
   };
 }
@@ -33,6 +36,7 @@ export function validationSuccess(): ValidationResult {
 export function validationFailure(errors: ValidationError[]): ValidationResult {
   return {
     valid: false,
+    success: false,
     errors
   };
 }
@@ -148,9 +152,12 @@ export function validateAllowedValues<T>(
  * @param message - Optional custom error message
  * @returns ValidationResult indicating success or failure
  */
-export function validateArray(value: any, field: string): ValidationResult {
+export function validateArray(valueOrParams: any, field: string, message?: string): ValidationResult {
+  const value = (valueOrParams && typeof valueOrParams === 'object' && field in valueOrParams)
+    ? valueOrParams[field]
+    : valueOrParams;
   if (!Array.isArray(value)) {
-    return validationError(field, `${field} must be an array`);
+    return validationError(field, message || `${field} must be an array`);
   }
   return validationSuccess();
 }
@@ -161,9 +168,12 @@ export function validateArray(value: any, field: string): ValidationResult {
  * @param field - Field name to check
  * @returns ValidationResult indicating success or failure
  */
-export function validateString(value: any, field: string): ValidationResult {
+export function validateString(valueOrParams: any, field: string, message?: string): ValidationResult {
+  const value = (valueOrParams && typeof valueOrParams === 'object' && field in valueOrParams)
+    ? valueOrParams[field]
+    : valueOrParams;
   if (typeof value !== 'string') {
-    return validationError(field, `${field} must be a string`);
+    return validationError(field, message || `${field} must be a string`);
   }
   return validationSuccess();
 }
@@ -174,9 +184,12 @@ export function validateString(value: any, field: string): ValidationResult {
  * @param field - Field name to check
  * @returns ValidationResult indicating success or failure
  */
-export function validateNumber(value: any, field: string): ValidationResult {
+export function validateNumber(valueOrParams: any, field: string, message?: string): ValidationResult {
+  const value = (valueOrParams && typeof valueOrParams === 'object' && field in valueOrParams)
+    ? valueOrParams[field]
+    : valueOrParams;
   if (typeof value !== 'number' || isNaN(value)) {
-    return validationError(field, `${field} must be a number`);
+    return validationError(field, message || `${field} must be a number`);
   }
   return validationSuccess();
 }
@@ -187,9 +200,12 @@ export function validateNumber(value: any, field: string): ValidationResult {
  * @param field - Field name to check
  * @returns ValidationResult indicating success or failure
  */
-export function validateBoolean(value: any, field: string): ValidationResult {
+export function validateBoolean(valueOrParams: any, field: string, message?: string): ValidationResult {
+  const value = (valueOrParams && typeof valueOrParams === 'object' && field in valueOrParams)
+    ? valueOrParams[field]
+    : valueOrParams;
   if (typeof value !== 'boolean') {
-    return validationError(field, `${field} must be a boolean`);
+    return validationError(field, message || `${field} must be a boolean`);
   }
   return validationSuccess();
 }
@@ -200,9 +216,12 @@ export function validateBoolean(value: any, field: string): ValidationResult {
  * @param field - Field name to check
  * @returns ValidationResult indicating success or failure
  */
-export function validateObject(value: any, field: string): ValidationResult {
+export function validateObject(valueOrParams: any, field: string, message?: string): ValidationResult {
+  const value = (valueOrParams && typeof valueOrParams === 'object' && field in valueOrParams)
+    ? valueOrParams[field]
+    : valueOrParams;
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return validationError(field, `${field} must be an object`);
+    return validationError(field, message || `${field} must be an object`);
   }
   return validationSuccess();
 }
