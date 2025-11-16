@@ -98,6 +98,18 @@ export class ReadwiseClient {
   }
   
   /**
+   * Make a PATCH request to the Readwise API
+   * @param url - The URL to request
+   * @param data - The data to send
+   * @param config - Optional Axios request config
+   * @returns The response data
+   */
+  async patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    const response: AxiosResponse<T> = await this.client.patch(url, data, config);
+    return response.data;
+  }
+
+  /**
    * Make a DELETE request to the Readwise API
    * @param url - The URL to request
    * @param config - Optional Axios request config

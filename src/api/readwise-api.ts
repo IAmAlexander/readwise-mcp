@@ -1,6 +1,6 @@
 import { ReadwiseClient } from './client.js';
-import { 
-  GetHighlightsParams, 
+import {
+  GetHighlightsParams,
   GetBooksParams,
   SearchParams,
   PaginatedResponse,
@@ -34,7 +34,18 @@ import {
   VideoHighlight,
   VideoHighlightsResponse,
   UpdateVideoPositionParams,
-  VideoPlaybackPosition
+  VideoPlaybackPosition,
+  SaveDocumentParams,
+  SaveDocumentResponse,
+  UpdateDocumentParams,
+  DeleteDocumentParams,
+  DeleteDocumentResponse,
+  BulkSaveDocumentsParams,
+  BulkUpdateDocumentsParams,
+  BulkDeleteDocumentsParams,
+  BulkOperationResult,
+  GetRecentContentParams,
+  RecentContentResponse
 } from '../types/index.js';
 
 /**
@@ -511,5 +522,345 @@ export class ReadwiseAPI {
   async getVideoPosition(document_id: string): Promise<VideoPlaybackPosition> {
     const response = await this.client.get<VideoPlaybackPosition>(`/video/${document_id}/position`);
     return response;
+  }
+
+  /**
+   * Save a new document to Readwise
+   * @param params - The parameters for saving the document
+   * @returns A promise resolving to the saved document
+   */
+  async saveDocument(params: SaveDocumentParams): Promise<SaveDocumentResponse> {
+    if (!params.url) {
+      throw {
+        type: 'validation',
+        details: [{
+          field: 'url',
+          message: 'URL is required'
+        }]
+      };
+    }
+
+    const payload: any = {
+      url: params.url,
+      saved_using: 'readwise-mcp'
+    };
+
+    // Add optional parameters if they exist
+    if (params.title) payload.title = params.title;
+    if (params.author) payload.author = params.author;
+    if (params.html) payload.html = params.html;
+    if (params.tags) payload.tags = params.tags;
+    if (params.summary) payload.summary = params.summary;
+    if (params.notes) payload.notes = params.notes;
+    if (params.location) payload.location = params.location;
+    if (params.category) payload.category = params.category;
+    if (params.published_date) payload.published_date = params.published_date;
+    if (params.image_url) payload.image_url = params.image_url;
+
+    // Note: Using v3 API endpoint for saving documents
+    const response = await this.client.post<SaveDocumentResponse>('/v3/save/', payload);
+    return response;
+  }
+
+  /**
+   * Update an existing document's metadata
+   * @param params - The parameters for updating the document
+   * @returns A promise resolving to the updated document
+   */
+  async updateDocument(params: UpdateDocumentParams): Promise<Document> {
+    if (!params.document_id) {
+      throw {
+        type: 'validation',
+        details: [{
+          field: 'document_id',
+          message: 'Document ID is required'
+        }]
+      };
+    }
+
+    // Prepare the request payload with only the fields that are provided
+    const payload: any = {};
+    if (params.title !== undefined) payload.title = params.title;
+    if (params.author !== undefined) payload.author = params.author;
+    if (params.summary !== undefined) payload.summary = params.summary;
+    if (params.published_date !== undefined) payload.published_date = params.published_date;
+    if (params.image_url !== undefined) payload.image_url = params.image_url;
+    if (params.location !== undefined) payload.location = params.location;
+    if (params.category !== undefined) payload.category = params.category;
+    if (params.tags !== undefined) payload.tags = params.tags;
+
+    // If no fields to update were provided
+    if (Object.keys(payload).length === 0) {
+      throw {
+        type: 'validation',
+        details: [{
+          field: 'payload',
+          message: 'No update fields provided'
+        }]
+      };
+    }
+
+    // Note: Using v3 API endpoint for updating documents
+    const response = await this.client.patch<Document>(`/v3/update/${params.document_id}/`, payload);
+    return response;
+  }
+
+  /**
+   * Delete a document from Readwise
+   * @param params - The parameters for deleting the document
+   * @returns A promise resolving to the deletion result
+   */
+  async deleteDocument(params: DeleteDocumentParams): Promise<DeleteDocumentResponse> {
+    if (!params.document_id) {
+      throw {
+        type: 'validation',
+        details: [{
+          field: 'document_id',
+          message: 'Document ID is required'
+        }]
+      };
+    }
+
+    // Check for confirmation
+    const requiredConfirmation = 'I confirm deletion';
+    if (!params.confirmation || params.confirmation !== requiredConfirmation) {
+      throw {
+        type: 'validation',
+        details: [{
+          field: 'confirmation',
+          message: `Confirmation required. Must be "${requiredConfirmation}" to confirm deletion.`
+        }]
+      };
+    }
+
+    // Note: Using v3 API endpoint for deleting documents
+    await this.client.delete(`/v3/delete/${params.document_id}/`);
+
+    return {
+      success: true,
+      document_id: params.document_id
+    };
+  }
+
+  /**
+   * Save multiple documents in bulk
+   * @param params - The bulk save parameters
+   * @returns A promise resolving to the bulk operation results
+   */
+  async bulkSaveDocuments(params: BulkSaveDocumentsParams): Promise<BulkOperationResult> {
+    if (!Array.isArray(params.items) || params.items.length === 0) {
+      throw {
+        type: 'validation',
+        details: [{
+          field: 'items',
+          message: 'Items array is required and must not be empty'
+        }]
+      };
+    }
+
+    // Check for confirmation
+    const requiredConfirmation = 'I confirm saving these items';
+    if (!params.confirmation || params.confirmation !== requiredConfirmation) {
+      throw {
+        type: 'validation',
+        details: [{
+          field: 'confirmation',
+          message: `Confirmation required. Must be "${requiredConfirmation}" to proceed.`
+        }]
+      };
+    }
+
+    // Process each item
+    const results = await Promise.all(
+      params.items.map(async (item) => {
+        try {
+          const response = await this.saveDocument(item);
+          return {
+            success: true,
+            document_id: response.id,
+            url: item.url
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            url: item.url,
+            error: error.message || 'Failed to save item'
+          };
+        }
+      })
+    );
+
+    const successful = results.filter(r => r.success).length;
+    const failed = results.length - successful;
+
+    return {
+      total: results.length,
+      successful,
+      failed,
+      results
+    };
+  }
+
+  /**
+   * Update multiple documents in bulk
+   * @param params - The bulk update parameters
+   * @returns A promise resolving to the bulk operation results
+   */
+  async bulkUpdateDocuments(params: BulkUpdateDocumentsParams): Promise<BulkOperationResult> {
+    if (!Array.isArray(params.updates) || params.updates.length === 0) {
+      throw {
+        type: 'validation',
+        details: [{
+          field: 'updates',
+          message: 'Updates array is required and must not be empty'
+        }]
+      };
+    }
+
+    // Check for confirmation
+    const requiredConfirmation = 'I confirm these updates';
+    if (!params.confirmation || params.confirmation !== requiredConfirmation) {
+      throw {
+        type: 'validation',
+        details: [{
+          field: 'confirmation',
+          message: `Confirmation required. Must be "${requiredConfirmation}" to proceed.`
+        }]
+      };
+    }
+
+    // Process each update
+    const results = await Promise.all(
+      params.updates.map(async (update) => {
+        try {
+          const response = await this.updateDocument(update);
+          return {
+            success: true,
+            document_id: update.document_id
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            document_id: update.document_id,
+            error: error.message || 'Failed to update document'
+          };
+        }
+      })
+    );
+
+    const successful = results.filter(r => r.success).length;
+    const failed = results.length - successful;
+
+    return {
+      total: results.length,
+      successful,
+      failed,
+      results
+    };
+  }
+
+  /**
+   * Delete multiple documents in bulk
+   * @param params - The bulk delete parameters
+   * @returns A promise resolving to the bulk operation results
+   */
+  async bulkDeleteDocuments(params: BulkDeleteDocumentsParams): Promise<BulkOperationResult> {
+    if (!Array.isArray(params.document_ids) || params.document_ids.length === 0) {
+      throw {
+        type: 'validation',
+        details: [{
+          field: 'document_ids',
+          message: 'Document IDs array is required and must not be empty'
+        }]
+      };
+    }
+
+    // Check for confirmation
+    const requiredConfirmation = 'I confirm deletion of these documents';
+    if (!params.confirmation || params.confirmation !== requiredConfirmation) {
+      throw {
+        type: 'validation',
+        details: [{
+          field: 'confirmation',
+          message: `Confirmation required. Must be "${requiredConfirmation}" to proceed.`
+        }]
+      };
+    }
+
+    // Process each deletion
+    const results = await Promise.all(
+      params.document_ids.map(async (document_id) => {
+        try {
+          await this.deleteDocument({ document_id, confirmation: 'I confirm deletion' });
+          return {
+            success: true,
+            document_id
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            document_id,
+            error: error.message || 'Failed to delete document'
+          };
+        }
+      })
+    );
+
+    const successful = results.filter(r => r.success).length;
+    const failed = results.length - successful;
+
+    return {
+      total: results.length,
+      successful,
+      failed,
+      results
+    };
+  }
+
+  /**
+   * Get recent content from Readwise
+   * @param params - The parameters for the request
+   * @returns A promise resolving to recent content
+   */
+  async getRecentContent(params: GetRecentContentParams = {}): Promise<RecentContentResponse> {
+    const limit = params.limit || 10;
+    const contentType = params.content_type || 'all';
+
+    const results: any[] = [];
+
+    // Fetch books if requested
+    if (contentType === 'books' || contentType === 'all') {
+      const booksResponse = await this.getBooks({ page_size: limit });
+      results.push(...booksResponse.results.map(book => ({
+        ...book,
+        type: 'book' as const,
+        created_at: book.updated || new Date().toISOString()
+      })));
+    }
+
+    // Fetch highlights if requested
+    if (contentType === 'highlights' || contentType === 'all') {
+      const highlightsResponse = await this.getHighlights({ page_size: limit });
+      results.push(...highlightsResponse.results.map(highlight => ({
+        ...highlight,
+        type: 'highlight' as const,
+        created_at: highlight.created_at
+      })));
+    }
+
+    // Sort by created_at, newest first
+    results.sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return dateB - dateA;
+    });
+
+    // Limit to requested number
+    const limitedResults = results.slice(0, limit);
+
+    return {
+      count: limitedResults.length,
+      results: limitedResults
+    };
   }
 }
