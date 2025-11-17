@@ -49,6 +49,13 @@ import { CreateVideoHighlightTool } from './tools/create-video-highlight.js';
 import { GetVideoHighlightsTool } from './tools/get-video-highlights.js';
 import { UpdateVideoPositionTool } from './tools/update-video-position.js';
 import { GetVideoPositionTool } from './tools/get-video-position.js';
+import { SaveDocumentTool } from './tools/save-document.js';
+import { UpdateDocumentTool } from './tools/update-document.js';
+import { DeleteDocumentTool } from './tools/delete-document.js';
+import { GetRecentContentTool } from './tools/get-recent-content.js';
+import { BulkSaveDocumentsTool } from './tools/bulk-save-documents.js';
+import { BulkUpdateDocumentsTool } from './tools/bulk-update-documents.js';
+import { BulkDeleteDocumentsTool } from './tools/bulk-delete-documents.js';
 
 // Prompt imports - need .js extension
 import { ReadwiseHighlightPrompt } from './prompts/highlight-prompt.js';
@@ -171,6 +178,17 @@ export class ReadwiseMCPServer {
     const updateVideoPositionTool = new UpdateVideoPositionTool(this.api, this.logger);
     const getVideoPositionTool = new GetVideoPositionTool(this.api, this.logger);
 
+    // Document management tools
+    const saveDocumentTool = new SaveDocumentTool(this.api, this.logger);
+    const updateDocumentTool = new UpdateDocumentTool(this.api, this.logger);
+    const deleteDocumentTool = new DeleteDocumentTool(this.api, this.logger);
+    const getRecentContentTool = new GetRecentContentTool(this.api, this.logger);
+
+    // Bulk document operation tools
+    const bulkSaveDocumentsTool = new BulkSaveDocumentsTool(this.api, this.logger);
+    const bulkUpdateDocumentsTool = new BulkUpdateDocumentsTool(this.api, this.logger);
+    const bulkDeleteDocumentsTool = new BulkDeleteDocumentsTool(this.api, this.logger);
+
     // Register tools
     this.toolRegistry.register(getHighlightsTool);
     this.toolRegistry.register(getBooksTool);
@@ -195,6 +213,13 @@ export class ReadwiseMCPServer {
     this.toolRegistry.register(getVideoHighlightsTool);
     this.toolRegistry.register(updateVideoPositionTool);
     this.toolRegistry.register(getVideoPositionTool);
+    this.toolRegistry.register(saveDocumentTool);
+    this.toolRegistry.register(updateDocumentTool);
+    this.toolRegistry.register(deleteDocumentTool);
+    this.toolRegistry.register(getRecentContentTool);
+    this.toolRegistry.register(bulkSaveDocumentsTool);
+    this.toolRegistry.register(bulkUpdateDocumentsTool);
+    this.toolRegistry.register(bulkDeleteDocumentsTool);
 
     this.logger.info(`Registered ${this.toolRegistry.getNames().length} tools`);
   }

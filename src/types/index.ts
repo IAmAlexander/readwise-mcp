@@ -428,4 +428,102 @@ export interface VideoDetailsResponse extends VideoMetadata {
 export interface VideoHighlightsResponse {
   count: number;
   results: VideoHighlight[];
+}
+
+/**
+ * Document management types (v3 API)
+ */
+export interface SaveDocumentParams {
+  url: string;
+  title?: string;
+  author?: string;
+  html?: string;
+  tags?: string[];
+  summary?: string;
+  notes?: string;
+  location?: 'new' | 'later' | 'archive' | 'feed';
+  category?: string;
+  published_date?: string;
+  image_url?: string;
+}
+
+export interface SaveDocumentResponse {
+  id: string;
+  url: string;
+  title: string;
+  author?: string;
+  created_at: string;
+  updated_at: string;
+  tags?: string[];
+}
+
+export interface UpdateDocumentParams {
+  document_id: string;
+  title?: string;
+  author?: string;
+  summary?: string;
+  published_date?: string;
+  image_url?: string;
+  location?: 'new' | 'later' | 'archive' | 'feed';
+  category?: string;
+  tags?: string[];
+}
+
+export interface DeleteDocumentParams {
+  document_id: string;
+  confirmation: string;
+}
+
+export interface DeleteDocumentResponse {
+  success: boolean;
+  document_id: string;
+}
+
+/**
+ * Bulk document operation types
+ */
+export interface BulkSaveDocumentsParams {
+  items: SaveDocumentParams[];
+  confirmation: string;
+}
+
+export interface BulkUpdateDocumentsParams {
+  updates: UpdateDocumentParams[];
+  confirmation: string;
+}
+
+export interface BulkDeleteDocumentsParams {
+  document_ids: string[];
+  confirmation: string;
+}
+
+export interface BulkOperationResult {
+  total: number;
+  successful: number;
+  failed: number;
+  results: Array<{
+    success: boolean;
+    document_id?: string;
+    url?: string;
+    error?: string;
+  }>;
+}
+
+/**
+ * Recent content types
+ */
+export interface GetRecentContentParams {
+  limit?: number;
+  content_type?: 'books' | 'highlights' | 'all';
+}
+
+export interface RecentContentItem {
+  type: 'book' | 'highlight';
+  created_at: string;
+  [key: string]: any;
+}
+
+export interface RecentContentResponse {
+  count: number;
+  results: RecentContentItem[];
 } 
