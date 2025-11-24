@@ -45,8 +45,10 @@ import {
   BulkDeleteDocumentsParams,
   BulkOperationResult,
   GetRecentContentParams,
-  RecentContentResponse
+  RecentContentResponse,
+  ValidationException
 } from '../types/index.js';
+import { CONFIRMATIONS } from '../constants.js';
 
 /**
  * API interface for interacting with Readwise
@@ -146,13 +148,7 @@ export class ReadwiseAPI {
    */
   async searchHighlights(params: SearchParams): Promise<SearchResult[]> {
     if (!params.query) {
-      throw {
-        type: 'validation',
-        details: [{
-          field: 'query',
-          message: 'Search query is required'
-        }]
-      };
+      throw ValidationException.forField('query', 'Search query is required');
     }
     
     const queryParams = new URLSearchParams();
@@ -488,40 +484,34 @@ export class ReadwiseAPI {
       queryParams.append('platform', params.platform);
     }
     
-    const response = await this.client.get<VideoResponse>(`/videos?${queryParams}`);
-    return response;
+    return this.client.get<VideoResponse>(`/videos?${queryParams}`);
   }
 
   async getVideo(document_id: string): Promise<VideoDetailsResponse> {
-    const response = await this.client.get<VideoDetailsResponse>(`/video/${document_id}`);
-    return response;
+    return this.client.get<VideoDetailsResponse>(`/video/${document_id}`);
   }
 
   async createVideoHighlight(params: CreateVideoHighlightParams): Promise<VideoHighlight> {
-    const response = await this.client.post<VideoHighlight>(`/video/${params.document_id}/highlight`, {
+    return this.client.post<VideoHighlight>(`/video/${params.document_id}/highlight`, {
       text: params.text,
       timestamp: params.timestamp,
       note: params.note
     });
-    return response;
   }
 
   async getVideoHighlights(document_id: string): Promise<VideoHighlightsResponse> {
-    const response = await this.client.get<VideoHighlightsResponse>(`/video/${document_id}/highlights`);
-    return response;
+    return this.client.get<VideoHighlightsResponse>(`/video/${document_id}/highlights`);
   }
 
   async updateVideoPosition(params: UpdateVideoPositionParams): Promise<VideoPlaybackPosition> {
-    const response = await this.client.post<VideoPlaybackPosition>(`/video/${params.document_id}/position`, {
+    return this.client.post<VideoPlaybackPosition>(`/video/${params.document_id}/position`, {
       position: params.position,
       duration: params.duration
     });
-    return response;
   }
 
   async getVideoPosition(document_id: string): Promise<VideoPlaybackPosition> {
-    const response = await this.client.get<VideoPlaybackPosition>(`/video/${document_id}/position`);
-    return response;
+    return this.client.get<VideoPlaybackPosition>(`/video/${document_id}/position`);
   }
 
   /**
@@ -531,13 +521,7 @@ export class ReadwiseAPI {
    */
   async saveDocument(params: SaveDocumentParams): Promise<SaveDocumentResponse> {
     if (!params.url) {
-      throw {
-        type: 'validation',
-        details: [{
-          field: 'url',
-          message: 'URL is required'
-        }]
-      };
+      throw ValidationException.forField('url', 'URL is required');
     }
 
     const payload: any = {
@@ -558,8 +542,7 @@ export class ReadwiseAPI {
     if (params.image_url) payload.image_url = params.image_url;
 
     // Note: Using v3 API endpoint for saving documents
-    const response = await this.client.post<SaveDocumentResponse>('/v3/save/', payload);
-    return response;
+    return this.client.post<SaveDocumentResponse>('/v3/save/', payload);
   }
 
   /**
@@ -569,13 +552,7 @@ export class ReadwiseAPI {
    */
   async updateDocument(params: UpdateDocumentParams): Promise<Document> {
     if (!params.document_id) {
-      throw {
-        type: 'validation',
-        details: [{
-          field: 'document_id',
-          message: 'Document ID is required'
-        }]
-      };
+      throw ValidationException.forField('document_id', 'Document ID is required');
     }
 
     // Prepare the request payload with only the fields that are provided
@@ -591,18 +568,11 @@ export class ReadwiseAPI {
 
     // If no fields to update were provided
     if (Object.keys(payload).length === 0) {
-      throw {
-        type: 'validation',
-        details: [{
-          field: 'payload',
-          message: 'No update fields provided'
-        }]
-      };
+      throw ValidationException.forField('payload', 'No update fields provided');
     }
 
     // Note: Using v3 API endpoint for updating documents
-    const response = await this.client.patch<Document>(`/v3/update/${params.document_id}/`, payload);
-    return response;
+    return this.client.patch<Document>(`/v3/update/${params.document_id}/`, payload);
   }
 
   /**
@@ -612,25 +582,12 @@ export class ReadwiseAPI {
    */
   async deleteDocument(params: DeleteDocumentParams): Promise<DeleteDocumentResponse> {
     if (!params.document_id) {
-      throw {
-        type: 'validation',
-        details: [{
-          field: 'document_id',
-          message: 'Document ID is required'
-        }]
-      };
+      throw ValidationException.forField('document_id', 'Document ID is required');
     }
 
     // Check for confirmation
-    const requiredConfirmation = 'I confirm deletion';
-    if (!params.confirmation || params.confirmation !== requiredConfirmation) {
-      throw {
-        type: 'validation',
-        details: [{
-          field: 'confirmation',
-          message: `Confirmation required. Must be "${requiredConfirmation}" to confirm deletion.`
-        }]
-      };
+    if (!params.confirmation || params.confirmation !== CONFIRMATIONS.DELETE_DOCUMENT) {
+      throw ValidationException.forField('confirmation', `Confirmation required. Must be "${CONFIRMATIONS.DELETE_DOCUMENT}" to confirm deletion.`);
     }
 
     // Note: Using v3 API endpoint for deleting documents
@@ -649,25 +606,12 @@ export class ReadwiseAPI {
    */
   async bulkSaveDocuments(params: BulkSaveDocumentsParams): Promise<BulkOperationResult> {
     if (!Array.isArray(params.items) || params.items.length === 0) {
-      throw {
-        type: 'validation',
-        details: [{
-          field: 'items',
-          message: 'Items array is required and must not be empty'
-        }]
-      };
+      throw ValidationException.forField('items', 'Items array is required and must not be empty');
     }
 
     // Check for confirmation
-    const requiredConfirmation = 'I confirm saving these items';
-    if (!params.confirmation || params.confirmation !== requiredConfirmation) {
-      throw {
-        type: 'validation',
-        details: [{
-          field: 'confirmation',
-          message: `Confirmation required. Must be "${requiredConfirmation}" to proceed.`
-        }]
-      };
+    if (!params.confirmation || params.confirmation !== CONFIRMATIONS.BULK_SAVE_DOCUMENTS) {
+      throw ValidationException.forField('confirmation', `Confirmation required. Must be "${CONFIRMATIONS.BULK_SAVE_DOCUMENTS}" to proceed.`);
     }
 
     // Process each item
@@ -708,25 +652,12 @@ export class ReadwiseAPI {
    */
   async bulkUpdateDocuments(params: BulkUpdateDocumentsParams): Promise<BulkOperationResult> {
     if (!Array.isArray(params.updates) || params.updates.length === 0) {
-      throw {
-        type: 'validation',
-        details: [{
-          field: 'updates',
-          message: 'Updates array is required and must not be empty'
-        }]
-      };
+      throw ValidationException.forField('updates', 'Updates array is required and must not be empty');
     }
 
     // Check for confirmation
-    const requiredConfirmation = 'I confirm these updates';
-    if (!params.confirmation || params.confirmation !== requiredConfirmation) {
-      throw {
-        type: 'validation',
-        details: [{
-          field: 'confirmation',
-          message: `Confirmation required. Must be "${requiredConfirmation}" to proceed.`
-        }]
-      };
+    if (!params.confirmation || params.confirmation !== CONFIRMATIONS.BULK_UPDATE_DOCUMENTS) {
+      throw ValidationException.forField('confirmation', `Confirmation required. Must be "${CONFIRMATIONS.BULK_UPDATE_DOCUMENTS}" to proceed.`);
     }
 
     // Process each update
@@ -766,32 +697,19 @@ export class ReadwiseAPI {
    */
   async bulkDeleteDocuments(params: BulkDeleteDocumentsParams): Promise<BulkOperationResult> {
     if (!Array.isArray(params.document_ids) || params.document_ids.length === 0) {
-      throw {
-        type: 'validation',
-        details: [{
-          field: 'document_ids',
-          message: 'Document IDs array is required and must not be empty'
-        }]
-      };
+      throw ValidationException.forField('document_ids', 'Document IDs array is required and must not be empty');
     }
 
     // Check for confirmation
-    const requiredConfirmation = 'I confirm deletion of these documents';
-    if (!params.confirmation || params.confirmation !== requiredConfirmation) {
-      throw {
-        type: 'validation',
-        details: [{
-          field: 'confirmation',
-          message: `Confirmation required. Must be "${requiredConfirmation}" to proceed.`
-        }]
-      };
+    if (!params.confirmation || params.confirmation !== CONFIRMATIONS.BULK_DELETE_DOCUMENTS) {
+      throw ValidationException.forField('confirmation', `Confirmation required. Must be "${CONFIRMATIONS.BULK_DELETE_DOCUMENTS}" to proceed.`);
     }
 
     // Process each deletion
     const results = await Promise.all(
       params.document_ids.map(async (document_id) => {
         try {
-          await this.deleteDocument({ document_id, confirmation: 'I confirm deletion' });
+          await this.deleteDocument({ document_id, confirmation: CONFIRMATIONS.DELETE_DOCUMENT });
           return {
             success: true,
             document_id

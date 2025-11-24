@@ -1,12 +1,9 @@
 import { ValidationResult, validationSuccess } from '../../types/validation.js';
+import type { MCPToolResult } from '../../types/index.js';
 import type { Logger } from '../../utils/logger-interface.js';
 
-/**
- * Result type for MCP tools, wrapping the actual result for MCP compliance
- */
-export type MCPToolResult<T> = {
-  result: T;
-};
+// Re-export MCPToolResult for backward compatibility
+export type { MCPToolResult } from '../../types/index.js';
 
 /**
  * Base class for all MCP tools

@@ -1,21 +1,53 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { ClientConfig } from '../types/index.js';
+import { RateLimiter, withRetry } from '../utils/rate-limiter.js';
+
+/**
+ * Extended client configuration with rate limiting options
+ */
+export interface ExtendedClientConfig extends ClientConfig {
+  /** Enable rate limiting (default: true) */
+  enableRateLimiting?: boolean;
+  /** Maximum requests per minute (default: 60) */
+  maxRequestsPerMinute?: number;
+  /** Enable automatic retry with exponential backoff (default: true) */
+  enableRetry?: boolean;
+  /** Maximum retry attempts (default: 3) */
+  maxRetries?: number;
+}
 
 /**
  * Client for making requests to the Readwise API
  */
 export class ReadwiseClient {
   private client: AxiosInstance;
-  
+  private rateLimiter: RateLimiter | null = null;
+  private enableRetry: boolean;
+  private maxRetries: number;
+
   /**
    * Create a new ReadwiseClient
    * @param config - The client configuration
    */
-  constructor(config: ClientConfig) {
+  constructor(config: ExtendedClientConfig) {
     if (!config.apiKey) {
       throw new Error('Readwise API key is required');
     }
-    
+
+    // Set up rate limiting (default: enabled with 60 requests/minute)
+    const enableRateLimiting = config.enableRateLimiting !== false;
+    if (enableRateLimiting) {
+      this.rateLimiter = new RateLimiter({
+        maxRequests: config.maxRequestsPerMinute ?? 60,
+        windowMs: 60 * 1000, // 1 minute
+        minDelayMs: 100
+      });
+    }
+
+    // Set up retry configuration
+    this.enableRetry = config.enableRetry !== false;
+    this.maxRetries = config.maxRetries ?? 3;
+
     this.client = axios.create({
       baseURL: config.baseUrl || 'https://readwise.io/api/v2',
       headers: {
@@ -63,16 +95,42 @@ export class ReadwiseClient {
   }
   
   /**
+   * Execute a request with rate limiting and optional retry
+   */
+  private async executeRequest<T>(fn: () => Promise<AxiosResponse<T>>): Promise<T> {
+    // Acquire rate limit slot if enabled
+    if (this.rateLimiter) {
+      await this.rateLimiter.acquire();
+    }
+
+    // Execute with retry if enabled
+    if (this.enableRetry) {
+      const response = await withRetry(fn, {
+        maxRetries: this.maxRetries,
+        baseDelayMs: 1000,
+        shouldRetry: (error: any) => {
+          // Retry on rate limit (429) or server errors (5xx)
+          const status = error?.details?.status;
+          return status === 429 || (status >= 500 && status < 600);
+        }
+      });
+      return response.data;
+    }
+
+    const response = await fn();
+    return response.data;
+  }
+
+  /**
    * Make a GET request to the Readwise API
    * @param url - The URL to request
    * @param config - Optional Axios request config
    * @returns The response data
    */
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response: AxiosResponse<T> = await this.client.get(url, config);
-    return response.data;
+    return this.executeRequest<T>(() => this.client.get(url, config));
   }
-  
+
   /**
    * Make a POST request to the Readwise API
    * @param url - The URL to request
@@ -81,10 +139,9 @@ export class ReadwiseClient {
    * @returns The response data
    */
   async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response: AxiosResponse<T> = await this.client.post(url, data, config);
-    return response.data;
+    return this.executeRequest<T>(() => this.client.post(url, data, config));
   }
-  
+
   /**
    * Make a PUT request to the Readwise API
    * @param url - The URL to request
@@ -93,10 +150,9 @@ export class ReadwiseClient {
    * @returns The response data
    */
   async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response: AxiosResponse<T> = await this.client.put(url, data, config);
-    return response.data;
+    return this.executeRequest<T>(() => this.client.put(url, data, config));
   }
-  
+
   /**
    * Make a PATCH request to the Readwise API
    * @param url - The URL to request
@@ -105,8 +161,7 @@ export class ReadwiseClient {
    * @returns The response data
    */
   async patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response: AxiosResponse<T> = await this.client.patch(url, data, config);
-    return response.data;
+    return this.executeRequest<T>(() => this.client.patch(url, data, config));
   }
 
   /**
@@ -116,7 +171,6 @@ export class ReadwiseClient {
    * @returns The response data
    */
   async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response: AxiosResponse<T> = await this.client.delete(url, config);
-    return response.data;
+    return this.executeRequest<T>(() => this.client.delete(url, config));
   }
 } 

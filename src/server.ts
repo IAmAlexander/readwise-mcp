@@ -5,6 +5,11 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import { createServer } from 'http';
 import type { Server as HttpServer } from 'http';
+import { createRequire } from 'module';
+
+// Load package.json for version info (ES modules compatible)
+const require = createRequire(import.meta.url);
+const packageJson = require('../package.json') as { name: string; version: string };
 
 // MCP SDK imports - need .js extension for runtime imports
 import { Server as MCPServer } from '@modelcontextprotocol/sdk/server/index.js';
@@ -119,8 +124,24 @@ export class ReadwiseMCPServer {
     // Initialize Express app
     this.app = express();
     this.app.use(bodyParser.json());
+
+    // Configure CORS - use environment variable or default to localhost origins
+    // Note: credentials: true requires specific origins, not wildcards
+    const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+      ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim())
+      : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001'];
+
     this.app.use(cors({
-      origin: '*',
+      origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       methods: ['GET', 'POST', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
       credentials: true
@@ -129,8 +150,8 @@ export class ReadwiseMCPServer {
 
     // Initialize MCP Server
     this.mcpServer = new MCPServer({
-      name: "readwise-mcp",
-      version: "1.0.0"
+      name: packageJson.name,
+      version: packageJson.version
     }, {
       capabilities: {
         tools: this.toolRegistry.getNames().reduce((acc, name) => ({ ...acc, [name]: true }), {}),
@@ -150,76 +171,51 @@ export class ReadwiseMCPServer {
    */
   private registerTools(): void {
     this.logger.debug('Registering tools');
-    
-    // Create tool instances
-    const getHighlightsTool = new GetHighlightsTool(this.api, this.logger);
-    const getBooksTool = new GetBooksTool(this.api, this.logger);
-    const getDocumentsTool = new GetDocumentsTool(this.api, this.logger);
-    const searchHighlightsTool = new SearchHighlightsTool(this.api, this.logger);
-    const getTagsTool = new GetTagsTool(this.api, this.logger);
-    const documentTagsTool = new DocumentTagsTool(this.api, this.logger);
-    const bulkTagsTool = new BulkTagsTool(this.api, this.logger);
-    const getReadingProgressTool = new GetReadingProgressTool(this.api, this.logger);
-    const updateReadingProgressTool = new UpdateReadingProgressTool(this.api, this.logger);
-    const getReadingListTool = new GetReadingListTool(this.api, this.logger);
-    const createHighlightTool = new CreateHighlightTool(this.api, this.logger);
-    const updateHighlightTool = new UpdateHighlightTool(this.api, this.logger);
-    const deleteHighlightTool = new DeleteHighlightTool(this.api, this.logger);
-    const createNoteTool = new CreateNoteTool(this.api, this.logger);
-    const advancedSearchTool = new AdvancedSearchTool(this.api, this.logger);
-    const searchByTagTool = new SearchByTagTool(this.api, this.logger);
-    const searchByDateTool = new SearchByDateTool(this.api, this.logger);
 
-    // Video tools
-    const getVideosTool = new GetVideosTool(this.api, this.logger);
-    const getVideoTool = new GetVideoTool(this.api, this.logger);
-    const createVideoHighlightTool = new CreateVideoHighlightTool(this.api, this.logger);
-    const getVideoHighlightsTool = new GetVideoHighlightsTool(this.api, this.logger);
-    const updateVideoPositionTool = new UpdateVideoPositionTool(this.api, this.logger);
-    const getVideoPositionTool = new GetVideoPositionTool(this.api, this.logger);
+    // All tool classes - instantiate and register in one pass
+    const toolClasses = [
+      // Core tools
+      GetHighlightsTool,
+      GetBooksTool,
+      GetDocumentsTool,
+      SearchHighlightsTool,
+      GetTagsTool,
+      DocumentTagsTool,
+      BulkTagsTool,
+      GetReadingProgressTool,
+      UpdateReadingProgressTool,
+      GetReadingListTool,
+      // Highlight management
+      CreateHighlightTool,
+      UpdateHighlightTool,
+      DeleteHighlightTool,
+      CreateNoteTool,
+      // Search tools
+      AdvancedSearchTool,
+      SearchByTagTool,
+      SearchByDateTool,
+      // Video tools
+      GetVideosTool,
+      GetVideoTool,
+      CreateVideoHighlightTool,
+      GetVideoHighlightsTool,
+      UpdateVideoPositionTool,
+      GetVideoPositionTool,
+      // Document management tools
+      SaveDocumentTool,
+      UpdateDocumentTool,
+      DeleteDocumentTool,
+      GetRecentContentTool,
+      // Bulk document operation tools
+      BulkSaveDocumentsTool,
+      BulkUpdateDocumentsTool,
+      BulkDeleteDocumentsTool,
+    ];
 
-    // Document management tools
-    const saveDocumentTool = new SaveDocumentTool(this.api, this.logger);
-    const updateDocumentTool = new UpdateDocumentTool(this.api, this.logger);
-    const deleteDocumentTool = new DeleteDocumentTool(this.api, this.logger);
-    const getRecentContentTool = new GetRecentContentTool(this.api, this.logger);
-
-    // Bulk document operation tools
-    const bulkSaveDocumentsTool = new BulkSaveDocumentsTool(this.api, this.logger);
-    const bulkUpdateDocumentsTool = new BulkUpdateDocumentsTool(this.api, this.logger);
-    const bulkDeleteDocumentsTool = new BulkDeleteDocumentsTool(this.api, this.logger);
-
-    // Register tools
-    this.toolRegistry.register(getHighlightsTool);
-    this.toolRegistry.register(getBooksTool);
-    this.toolRegistry.register(getDocumentsTool);
-    this.toolRegistry.register(searchHighlightsTool);
-    this.toolRegistry.register(getTagsTool);
-    this.toolRegistry.register(documentTagsTool);
-    this.toolRegistry.register(bulkTagsTool);
-    this.toolRegistry.register(getReadingProgressTool);
-    this.toolRegistry.register(updateReadingProgressTool);
-    this.toolRegistry.register(getReadingListTool);
-    this.toolRegistry.register(createHighlightTool);
-    this.toolRegistry.register(updateHighlightTool);
-    this.toolRegistry.register(deleteHighlightTool);
-    this.toolRegistry.register(createNoteTool);
-    this.toolRegistry.register(advancedSearchTool);
-    this.toolRegistry.register(searchByTagTool);
-    this.toolRegistry.register(searchByDateTool);
-    this.toolRegistry.register(getVideosTool);
-    this.toolRegistry.register(getVideoTool);
-    this.toolRegistry.register(createVideoHighlightTool);
-    this.toolRegistry.register(getVideoHighlightsTool);
-    this.toolRegistry.register(updateVideoPositionTool);
-    this.toolRegistry.register(getVideoPositionTool);
-    this.toolRegistry.register(saveDocumentTool);
-    this.toolRegistry.register(updateDocumentTool);
-    this.toolRegistry.register(deleteDocumentTool);
-    this.toolRegistry.register(getRecentContentTool);
-    this.toolRegistry.register(bulkSaveDocumentsTool);
-    this.toolRegistry.register(bulkUpdateDocumentsTool);
-    this.toolRegistry.register(bulkDeleteDocumentsTool);
+    // Instantiate and register all tools
+    for (const ToolClass of toolClasses) {
+      this.toolRegistry.register(new ToolClass(this.api, this.logger));
+    }
 
     this.logger.info(`Registered ${this.toolRegistry.getNames().length} tools`);
   }
@@ -311,7 +307,7 @@ export class ReadwiseMCPServer {
     // Capabilities endpoint
     this.app.get('/capabilities', (_req: Request, res: Response) => {
       res.json({
-        version: '1.0.0',
+        version: packageJson.version,
         transports: ['sse'],
         tools: this.toolRegistry.getNames().map(name => {
           const tool = this.toolRegistry.get(name);
@@ -710,8 +706,8 @@ export class ReadwiseMCPServer {
           method: 'connection_established',
           params: {
             server_info: {
-              name: 'readwise-mcp',
-              version: '1.0.0',
+              name: packageJson.name,
+              version: packageJson.version,
               capabilities: {
                 transports: ['sse'],
                 tools: this.toolRegistry.getNames().reduce((acc, name) => ({ ...acc, [name]: true }), {}),

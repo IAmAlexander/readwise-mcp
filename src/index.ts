@@ -2,12 +2,9 @@
 
 // Runtime imports - need .js extension
 import { ReadwiseMCPServer } from './server.js';
-import { Server as MCPServer } from '@modelcontextprotocol/sdk/server/index.js';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 
 // Type-only imports - no .js extension
 import type { TransportType } from './types/index.js';
-import type { ValidationResult } from './types/validation.js';
 
 // Local imports with implementation - need .js extension
 import { ReadwiseClient } from './api/client.js';
@@ -18,7 +15,6 @@ import { getConfig, saveConfig } from './utils/config.js';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import readline from 'readline';
-import { stdin as input, stdout as output } from 'process';
 
 /**
  * Main entry point for the Readwise MCP server

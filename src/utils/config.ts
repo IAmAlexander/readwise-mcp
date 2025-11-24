@@ -57,9 +57,9 @@ function getConfigDir(): string {
   const homeDir = os.homedir();
   const configDir = path.join(homeDir, '.readwise-mcp');
   
-  // Create the directory if it doesn't exist
+  // Create the directory if it doesn't exist with restrictive permissions
   if (!fs.existsSync(configDir)) {
-    fs.mkdirSync(configDir, { recursive: true });
+    fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
   }
   
   return configDir;
@@ -117,7 +117,11 @@ function loadEnvConfig(): Partial<ServerConfig> {
  */
 export function saveApiKey(apiKey: string): void {
   const credentialsPath = getCredentialsPath();
-  fs.writeFileSync(credentialsPath, JSON.stringify({ readwiseApiKey: apiKey }), 'utf8');
+  // Write with restrictive permissions (owner read/write only) to protect API key
+  fs.writeFileSync(credentialsPath, JSON.stringify({ readwiseApiKey: apiKey }), {
+    encoding: 'utf8',
+    mode: 0o600
+  });
 }
 
 /**
@@ -141,8 +145,11 @@ export function saveConfig(config: Partial<ServerConfig>): void {
   // Merge existing config with new config
   const mergedConfig = { ...existingConfig, ...config };
   
-  // Save config
-  fs.writeFileSync(configPath, JSON.stringify(mergedConfig, null, 2), 'utf8');
+  // Save config with restrictive permissions (owner read/write only)
+  fs.writeFileSync(configPath, JSON.stringify(mergedConfig, null, 2), {
+    encoding: 'utf8',
+    mode: 0o600
+  });
   
   // If API key is provided, also save to credentials file for backward compatibility
   if (config.readwiseApiKey) {
