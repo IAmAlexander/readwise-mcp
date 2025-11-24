@@ -14,22 +14,185 @@ A Model Context Protocol (MCP) server for accessing and interacting with your Re
 - MCP protocol compliance with proper request_id handling
 - Health check endpoint for monitoring
 - Improved setup wizard with API key validation
+- **Document Management**: Save, update, and delete documents via URL
+- **Bulk Operations**: Perform bulk save, update, delete, and tagging operations
+- **Video Support**: Full video content management with transcripts and timestamps
+- **Reading Progress**: Track and update reading progress across your library
 
 ## Project Structure
 
-This repository is organized into the following key directories:
+```
+readwise-mcp/
+├── src/                           # Main source code
+│   ├── api/                       # API client layer
+│   │   ├── client.ts              # HTTP client with Axios, error handling, rate limit detection
+│   │   ├── mock-client.ts         # Mock implementation for testing without API key
+│   │   └── readwise-api.ts        # Readwise API wrapper with all endpoint methods
+│   │
+│   ├── tools/                     # MCP tool implementations (29 tools)
+│   │   ├── base.ts                # Base tool class with common functionality
+│   │   │
+│   │   │  # Content Browsing Tools
+│   │   ├── get-books.ts           # Retrieve books from library
+│   │   ├── get-documents.ts       # Retrieve documents from library
+│   │   ├── get-highlights.ts      # Retrieve highlights with filtering
+│   │   ├── get-recent-content.ts  # Get recently added/updated content
+│   │   │
+│   │   │  # Search Tools
+│   │   ├── search-highlights.ts   # Full-text search for highlights
+│   │   ├── advanced-search.ts     # Multi-filter search with facets
+│   │   ├── search-by-tag.ts       # Search highlights by tags (AND/OR)
+│   │   ├── search-by-date.ts      # Search highlights by date range
+│   │   │
+│   │   │  # Highlight Management Tools
+│   │   ├── create-highlight.ts    # Create new highlights
+│   │   ├── update-highlight.ts    # Update existing highlights
+│   │   ├── delete-highlight.ts    # Delete highlights (with confirmation)
+│   │   ├── create-note.ts         # Add notes to highlights
+│   │   │
+│   │   │  # Document Management Tools (v3 API)
+│   │   ├── save-document.ts       # Save new documents by URL
+│   │   ├── update-document.ts     # Update document metadata
+│   │   ├── delete-document.ts     # Delete documents (with confirmation)
+│   │   │
+│   │   │  # Bulk Operation Tools
+│   │   ├── bulk-tags.ts           # Bulk tag operations
+│   │   ├── bulk-save-documents.ts # Bulk save multiple documents
+│   │   ├── bulk-update-documents.ts # Bulk update document metadata
+│   │   ├── bulk-delete-documents.ts # Bulk delete documents
+│   │   │
+│   │   │  # Tag Management Tools
+│   │   ├── get-tags.ts            # Retrieve all tags
+│   │   ├── document-tags.ts       # Manage tags for specific documents
+│   │   │
+│   │   │  # Reading Progress Tools
+│   │   ├── get-reading-progress.ts    # Get reading progress for document
+│   │   ├── update-reading-progress.ts # Update reading status/percentage
+│   │   ├── get-reading-list.ts        # Get reading list with progress info
+│   │   │
+│   │   │  # Video Tools
+│   │   ├── get-videos.ts          # List videos from library
+│   │   ├── get-video.ts           # Get video details with transcript
+│   │   ├── get-video-highlights.ts    # Get highlights for a video
+│   │   ├── create-video-highlight.ts  # Create highlight with timestamp
+│   │   ├── get-video-position.ts      # Get playback position
+│   │   └── update-video-position.ts   # Update playback position
+│   │
+│   ├── prompts/                   # MCP prompt implementations
+│   │   ├── highlight-prompt.ts    # Analyze highlights (summarize, analyze, connect, question)
+│   │   └── search-prompt.ts       # Search and format highlights with attribution
+│   │
+│   ├── mcp/                       # MCP infrastructure
+│   │   ├── registry/              # Tool and prompt registration system
+│   │   │   ├── base-tool.ts       # Base class for all MCP tools
+│   │   │   ├── base-prompt.ts     # Base class for all MCP prompts
+│   │   │   ├── tool-registry.ts   # Tool registration and lookup
+│   │   │   └── prompt-registry.ts # Prompt registration and lookup
+│   │   └── types.ts               # MCP-specific type definitions
+│   │
+│   ├── types/                     # TypeScript type definitions
+│   │   ├── index.ts               # Core types (Highlight, Book, Document, etc.)
+│   │   ├── validation.ts          # Validation utilities and result types
+│   │   ├── guards.ts              # Type guard functions
+│   │   └── modelcontextprotocol__sdk.d.ts # MCP SDK type declarations
+│   │
+│   ├── utils/                     # Utility functions
+│   │   ├── config.ts              # Configuration management
+│   │   ├── logger.ts              # Main logger implementation
+│   │   ├── logger-interface.ts    # Logger interface definition
+│   │   ├── safe-logger.ts         # Transport-aware safe logging
+│   │   ├── response.ts            # Response formatting utilities
+│   │   └── sse.ts                 # Server-Sent Events utilities
+│   │
+│   │  # Server Entry Points
+│   ├── index.ts                   # Main CLI entry point with argument parsing
+│   ├── server.ts                  # Core MCP server implementation
+│   ├── simple-server.ts           # Standalone Express server with OpenAPI
+│   │
+│   │  # Serverless Handlers
+│   ├── serverless.ts              # Serverless wrapper
+│   ├── lambda.ts                  # AWS Lambda handler
+│   └── gcf.ts                     # Google Cloud Function handler
+│
+├── tests/                         # Test suite
+│   ├── setup.ts                   # Test configuration and setup
+│   ├── server.test.ts             # Server integration tests
+│   ├── tools/                     # Individual tool tests
+│   │   ├── get-books.test.ts
+│   │   ├── get-documents.test.ts
+│   │   ├── get-highlights.test.ts
+│   │   └── search-highlights.test.ts
+│   ├── prompts/                   # Prompt tests
+│   │   └── highlight-prompt.test.ts
+│   ├── advanced-search.test.ts    # Advanced search feature tests
+│   ├── bulk-operations.test.ts    # Bulk operation tests
+│   ├── delete-confirmation.test.ts # Deletion confirmation tests
+│   ├── reading-progress.test.ts   # Reading progress tests
+│   ├── tags.test.ts               # Tag management tests
+│   ├── video-features.test.ts     # Video functionality tests
+│   └── status.test.ts             # Health/status endpoint tests
+│
+├── examples/                      # Example implementations
+│   ├── README.md                  # Examples documentation
+│   ├── programmatic-access.ts     # Programmatic API usage example
+│   ├── mcp-implementations/       # MCP implementation examples
+│   │   └── basic-mcp-test.ts
+│   └── test-clients/              # Client-side test scripts
+│       └── test-mcp-client.ts
+│
+├── test-scripts/                  # Testing utilities
+│   ├── README.md                  # Test scripts documentation
+│   └── fixed-mcp-test.ts          # MCP protocol compliance tests
+│
+├── scripts/                       # Development scripts
+│   ├── run-inspector.ts           # MCP Inspector runner
+│   ├── test-inspector.ts          # Inspector test automation
+│   └── tsconfig.json              # Scripts-specific TypeScript config
+│
+├── docs/                          # Documentation
+│   ├── serverless-deployment.md   # Serverless deployment guide
+│   ├── serverless-implementation-summary.md # Implementation details
+│   └── testing-and-debugging.md   # Testing guide
+│
+├── dist/                          # Compiled JavaScript output (generated)
+│   └── ...                        # Mirrors src/ structure with .js and .d.ts files
+│
+├── bin/                           # CLI binaries
+│   └── cli.ts                     # CLI wrapper script
+│
+│  # Configuration Files
+├── package.json                   # NPM package configuration
+├── package-lock.json              # NPM dependency lock file
+├── tsconfig.json                  # TypeScript configuration
+├── .eslintrc.json                 # ESLint configuration
+├── serverless.yml                 # Serverless Framework configuration
+├── smithery.yaml                  # Smithery AI deployment configuration
+│
+│  # Documentation
+├── README.md                      # This file - main documentation
+└── SMITHERY.md                    # Smithery deployment documentation
+```
 
-- **src/**: Main source code for the Readwise MCP server
-- **test-scripts/**: Test scripts and utilities for validating MCP server functionality
-  - `smart-mcp-test.sh`: Main testing script for both stdio and SSE transports
-  - `run-simple-server.sh`: Script to run a simple MCP server
-  - See `test-scripts/README.md` for complete documentation
-- **examples/**: Example implementations and code samples
-  - `examples/mcp-implementations/`: Basic MCP server implementations
-  - `examples/test-clients/`: Client-side test scripts
-  - See `examples/README.md` for complete documentation
-- **dist/**: Compiled JavaScript output (generated)
-- **scripts/**: Utility scripts for development and testing
+### Key Directories Explained
+
+#### `src/api/`
+Contains the HTTP client layer for communicating with the Readwise API. The `client.ts` file provides a generic HTTP client with error handling and rate limit detection. The `readwise-api.ts` file wraps all Readwise API endpoints with typed methods.
+
+#### `src/tools/`
+Each file implements a single MCP tool that exposes Readwise functionality to AI assistants. Tools follow a consistent pattern:
+- Parameter validation
+- API interaction
+- Response formatting
+- Error handling with user-friendly messages
+
+#### `src/mcp/`
+Infrastructure for the MCP protocol implementation, including tool and prompt registration, base classes, and type definitions.
+
+#### `src/types/`
+Comprehensive TypeScript type definitions for all data structures, API responses, and validation utilities.
+
+#### `src/utils/`
+Shared utilities including logging (with transport-aware safe logging for stdio), configuration management, and response formatting.
 
 ## Installation
 
@@ -194,12 +357,69 @@ The mock implementation includes:
 - Simulated network delays for realistic testing
 - Error handling testing
 
-## Available Tools
+## Available Tools (29 Total)
 
-- **get_highlights**: Get highlights from your Readwise library
-- **get_books**: Get books from your Readwise library
-- **get_documents**: Get documents from your Readwise library
-- **search_highlights**: Search for highlights in your Readwise library
+### Content Browsing
+| Tool | Description |
+|------|-------------|
+| `get_books` | Retrieve books from your Readwise library with category filtering |
+| `get_documents` | Retrieve documents from your library with pagination |
+| `get_highlights` | Get highlights with filtering by book_id, search, and pagination |
+| `get_recent_content` | Get the most recently added or updated content |
+
+### Search & Filtering
+| Tool | Description |
+|------|-------------|
+| `search_highlights` | Full-text search for highlights using a query string |
+| `advanced_search` | Multi-filter search with facets (books, tags, categories, dates) |
+| `search_by_tag` | Search highlights by tags with AND/OR matching |
+| `search_by_date` | Search highlights within a date range |
+
+### Highlight Management
+| Tool | Description |
+|------|-------------|
+| `create_highlight` | Create new highlights with text, book_id, notes, location, color, tags |
+| `update_highlight` | Update existing highlight text, notes, or metadata |
+| `delete_highlight` | Delete a highlight (requires "DELETE" confirmation) |
+| `create_note` | Add notes to existing highlights |
+
+### Document Management (v3 API)
+| Tool | Description |
+|------|-------------|
+| `save_document` | Save new documents to Readwise by URL |
+| `update_document` | Update document metadata (title, author, tags, location) |
+| `delete_document` | Delete documents (requires "I confirm deletion" confirmation) |
+
+### Bulk Operations
+| Tool | Description |
+|------|-------------|
+| `bulk_tags` | Add tags to multiple documents at once |
+| `bulk_save_documents` | Save multiple documents by URL in one operation |
+| `bulk_update_documents` | Update metadata for multiple documents |
+| `bulk_delete_documents` | Delete multiple documents (requires confirmation) |
+
+### Tag Management
+| Tool | Description |
+|------|-------------|
+| `get_tags` | Retrieve all tags from your Readwise library |
+| `document_tags` | Get, add, or remove tags for a specific document |
+
+### Reading Progress
+| Tool | Description |
+|------|-------------|
+| `get_reading_progress` | Get reading progress for a specific document |
+| `update_reading_progress` | Update reading status, percentage, or pages read |
+| `get_reading_list` | Get reading list filtered by status or category |
+
+### Video Support
+| Tool | Description |
+|------|-------------|
+| `get_videos` | List videos from your library with optional filtering |
+| `get_video` | Get video details including transcript |
+| `get_video_highlights` | Get all highlights for a specific video |
+| `create_video_highlight` | Create a highlight at a specific timestamp |
+| `get_video_position` | Get current playback position for a video |
+| `update_video_position` | Update video playback position |
 
 ## Available Prompts
 
