@@ -1,6 +1,7 @@
 // Core type definitions for Readwise MCP
 export * from './validation.js';
 export * from './guards.js';
+export * from './errors.js';
 
 // Import ValidationResult for use in MCPTool interface
 import type { ValidationResult } from './validation.js';
