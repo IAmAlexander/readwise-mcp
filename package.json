@@ -1,16 +1,45 @@
 {
   "name": "readwise-mcp",
   "version": "1.0.0",
-  "description": "Readwise integration for Model Context Protocol",
+  "description": "Readwise integration for Model Context Protocol - Access your highlights, books, and documents through MCP",
   "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "readwise",
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "ai",
+    "highlights",
+    "reading",
+    "knowledge-management"
+  ],
+  "author": "IAmAlexander",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IAmAlexander/readwise-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/IAmAlexander/readwise-mcp/issues"
+  },
+  "homepage": "https://github.com/IAmAlexander/readwise-mcp#readme",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
+    "start:sse": "node dist/index.js --transport sse",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint --ext .ts .",
-    "fix": "eslint --ext .ts . --fix"
+    "fix": "eslint --ext .ts . --fix",
+    "prepublishOnly": "npm run build && npm test"
   },
   "bin": {
     "readwise-mcp": "dist/index.js"
