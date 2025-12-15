@@ -268,6 +268,17 @@ Add to `.cursor/mcp.json` in your project:
 
 ## Deployment (Hosted SSE Server)
 
+### Smithery
+
+[![Smithery Badge](https://smithery.ai/badge/readwise-mcp)](https://smithery.ai/server/readwise-mcp)
+
+Install via Smithery CLI:
+```bash
+npx @smithery/cli install readwise-mcp --client claude
+```
+
+Or find it on the [Smithery Registry](https://smithery.ai/server/readwise-mcp).
+
 ### Railway (One-Click Deploy)
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/readwise-mcp)
