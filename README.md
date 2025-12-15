@@ -38,7 +38,7 @@ This repository is organized into the following key directories:
 npm install -g readwise-mcp
 
 # Or clone the repository and install dependencies
-git clone https://github.com/your-username/readwise-mcp.git
+git clone https://github.com/IAmAlexander/readwise-mcp.git
 cd readwise-mcp
 npm install
 npm run build
@@ -229,6 +229,81 @@ The mock implementation includes:
 - Specific error messages for different API error conditions
 - Consistent error format across all tools and prompts
 - Transport-aware logging that doesn't interfere with the protocol
+
+## Integration
+
+### Claude Desktop
+
+Add to your Claude Desktop config (`~/.config/Claude/claude_desktop_config.json` on Linux, `~/Library/Application Support/Claude/claude_desktop_config.json` on Mac):
+
+```json
+{
+  "mcpServers": {
+    "readwise": {
+      "command": "readwise-mcp",
+      "env": {
+        "READWISE_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+### Cursor
+
+Add to `.cursor/mcp.json` in your project:
+
+```json
+{
+  "mcpServers": {
+    "readwise": {
+      "command": "readwise-mcp",
+      "env": {
+        "READWISE_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+## Deployment (Hosted SSE Server)
+
+### Smithery
+
+[![Smithery Badge](https://smithery.ai/badge/readwise-mcp)](https://smithery.ai/server/readwise-mcp)
+
+Install via Smithery CLI:
+```bash
+npx @smithery/cli install readwise-mcp --client claude
+```
+
+Or find it on the [Smithery Registry](https://smithery.ai/server/readwise-mcp).
+
+### Railway (One-Click Deploy)
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/readwise-mcp)
+
+1. Click the button above or go to [Railway](https://railway.app)
+2. Connect your GitHub repo
+3. Add environment variable: `READWISE_API_KEY`
+4. Deploy!
+
+Your server will be available at `https://your-app.railway.app`
+
+### Render
+
+1. Create a new Web Service on [Render](https://render.com)
+2. Connect your GitHub repo
+3. Render will auto-detect `render.yaml`
+4. Add environment variable: `READWISE_API_KEY`
+5. Deploy!
+
+### Docker
+
+```bash
+docker build -t readwise-mcp .
+docker run -p 3001:3001 -e READWISE_API_KEY=your_key readwise-mcp
+```
 
 ## Development
 

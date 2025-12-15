@@ -1,45 +1,26 @@
-version: 1
-type: docker
+# Smithery configuration for Readwise MCP Server
+# https://smithery.ai/docs/config
 
-# Build configuration
-build:
-  dockerfile: Dockerfile
-  dockerBuildPath: .
-
-# Runtime configuration
-runtime:
-  port: 3000
-
-# MCP configuration  
-mcp:
-  manifest: mcp-manifest.json
-
-# Start command configuration
 startCommand:
   type: stdio
   configSchema:
     type: object
     required:
-      - readwiseApiToken
+      - readwiseApiKey
     properties:
-      readwiseApiToken:
+      readwiseApiKey:
         type: string
-        description: The API token for the Readwise API
-      port:
-        type: number
-        description: The port to run the server on (default 3001)
-        default: 3001
+        description: Your Readwise API key from https://readwise.io/access_token
       debug:
         type: boolean
         description: Enable debug logging
         default: false
-  commandFunction: |
+  commandFunction: |-
     (config) => ({
-      command: 'node',
-      args: ['dist/simplified-server.js'],
+      command: 'npx',
+      args: ['-y', 'readwise-mcp'],
       env: {
-        READWISE_API_TOKEN: config.readwiseApiToken,
-        PORT: config.port ? config.port.toString() : '3001',
+        READWISE_API_KEY: config.readwiseApiKey,
         DEBUG: config.debug ? 'true' : 'false'
       }
     })

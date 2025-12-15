@@ -1,0 +1,16 @@
+# Render.com deployment configuration
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: readwise-mcp
+    runtime: node
+    buildCommand: npm ci && npm run build
+    startCommand: node dist/index.js --transport sse --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: READWISE_API_KEY
+        sync: false  # Must be set manually in Render dashboard
+    autoDeploy: true
