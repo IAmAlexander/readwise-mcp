@@ -58,6 +58,7 @@ import { SaveDocumentTool } from './tools/save-document.js';
 import { UpdateDocumentTool } from './tools/update-document.js';
 import { DeleteDocumentTool } from './tools/delete-document.js';
 import { GetRecentContentTool } from './tools/get-recent-content.js';
+import { GetDailyReviewTool } from './tools/get-daily-review.js';
 import { BulkSaveDocumentsTool } from './tools/bulk-save-documents.js';
 import { BulkUpdateDocumentsTool } from './tools/bulk-update-documents.js';
 import { BulkDeleteDocumentsTool } from './tools/bulk-delete-documents.js';
@@ -206,6 +207,8 @@ export class ReadwiseMCPServer {
       UpdateDocumentTool,
       DeleteDocumentTool,
       GetRecentContentTool,
+      // Daily review (spaced repetition)
+      GetDailyReviewTool,
       // Bulk document operation tools
       BulkSaveDocumentsTool,
       BulkUpdateDocumentsTool,

@@ -46,6 +46,10 @@ import {
   BulkOperationResult,
   GetRecentContentParams,
   RecentContentResponse,
+  DailyReviewResponse,
+  CompactHighlight,
+  CompactBook,
+  ResponseFormat,
   ValidationException
 } from '../types/index.js';
 import { CONFIRMATIONS } from '../constants.js';
@@ -780,5 +784,88 @@ export class ReadwiseAPI {
       count: limitedResults.length,
       results: limitedResults
     };
+  }
+
+  /**
+   * Get daily review highlights (spaced repetition)
+   * @returns A promise resolving to the daily review response
+   */
+  async getDailyReview(): Promise<DailyReviewResponse> {
+    return this.client.get<DailyReviewResponse>('/review/');
+  }
+
+  /**
+   * Convert highlights to compact format for token optimization
+   * @param highlights - The highlights to convert
+   * @returns Compact highlight array
+   */
+  toCompactHighlights(highlights: any[]): CompactHighlight[] {
+    return highlights.map(h => ({
+      id: h.id,
+      text: h.text,
+      note: h.note || undefined,
+      book_id: h.book_id,
+      title: h.title || h.book?.title || 'Unknown',
+      author: h.author || h.book?.author || 'Unknown'
+    }));
+  }
+
+  /**
+   * Convert books to compact format for token optimization
+   * @param books - The books to convert
+   * @returns Compact book array
+   */
+  toCompactBooks(books: any[]): CompactBook[] {
+    return books.map(b => ({
+      id: b.id,
+      title: b.title,
+      author: b.author || 'Unknown',
+      category: b.category || 'books',
+      highlight_count: b.num_highlights || 0
+    }));
+  }
+
+  /**
+   * Get highlights with optional compact format
+   * @param params - The parameters for the request
+   * @param format - Response format ('full' or 'compact')
+   * @returns A promise resolving to highlights in the requested format
+   */
+  async getHighlightsOptimized(
+    params: GetHighlightsParams = {},
+    format: ResponseFormat = 'full'
+  ): Promise<{ count: number; results: any[] }> {
+    const response = await this.getHighlights(params);
+
+    if (format === 'compact') {
+      return {
+        count: response.count,
+        results: this.toCompactHighlights(response.results)
+      };
+    }
+
+    return response;
+  }
+
+  /**
+   * Get books with optional compact format
+   * @param params - The parameters for the request
+   * @param format - Response format ('full' or 'compact')
+   * @returns A promise resolving to books in the requested format
+   */
+  async getBooksOptimized(
+    params: GetBooksParams = {},
+    format: ResponseFormat = 'full'
+  ): Promise<{ count: number; results: any[] }> {
+    const response = await this.getBooks(params);
+
+    if (format === 'compact') {
+      return {
+        count: response.count,
+        results: this.toCompactBooks(response.results)
+      };
+    }
+
+    return response;
   }
 }

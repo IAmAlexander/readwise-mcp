@@ -527,4 +527,59 @@ export interface RecentContentItem {
 export interface RecentContentResponse {
   count: number;
   results: RecentContentItem[];
-} 
+}
+
+// Daily Review Types (Spaced Repetition)
+export interface DailyReviewHighlight {
+  id: number;
+  text: string;
+  title: string;
+  author: string;
+  source_url: string | null;
+  source_type: string;
+  category: string;
+  location: number | null;
+  location_type: string | null;
+  note: string | null;
+  highlighted_at: string | null;
+  highlight_url: string;
+  image_url: string | null;
+  book_id: number;
+  tags: Array<{ id: number; name: string }>;
+}
+
+export interface DailyReviewResponse {
+  review_id: number;
+  review_url: string;
+  review_completed: boolean;
+  highlights: DailyReviewHighlight[];
+}
+
+// Compact Response Types (Token Optimization)
+export interface CompactHighlight {
+  id: number;
+  text: string;
+  note?: string;
+  book_id: number;
+  title: string;
+  author: string;
+}
+
+export interface CompactBook {
+  id: number;
+  title: string;
+  author: string;
+  category: string;
+  highlight_count: number;
+}
+
+export interface CompactDocument {
+  id: string;
+  title: string;
+  author?: string;
+  category: string;
+  location: string;
+  tags: string[];
+}
+
+export type ResponseFormat = 'full' | 'compact'; 

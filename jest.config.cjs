@@ -41,6 +41,7 @@ module.exports = {
     'tests/server.test.ts',
     'tests/tools/get-books.test.ts',
     'tests/tools/get-documents.test.ts',
+    'tests/tools/get-highlights.test.ts',
     'tests/prompts/highlight-prompt.test.ts',
   ],
 };
