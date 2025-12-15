@@ -6,7 +6,20 @@ module.exports = {
     sourceType: 'module',
     createDefaultProgram: true
   },
-  ignorePatterns: ['.eslintrc.js', 'scripts/*.js', 'dist', 'node_modules'],
+  ignorePatterns: [
+    '.eslintrc.cjs',
+    'dist',
+    'node_modules',
+    'tests',
+    'examples',
+    'scripts',
+    'bin',
+    'test-scripts',
+    '**/*.d.ts',
+    'src/fixed-server.ts',
+    'src/fixed-server-deploy.ts',
+    'src/run-fixed-server.ts'
+  ],
   plugins: ['@typescript-eslint/eslint-plugin'],
   extends: [
     'plugin:@typescript-eslint/recommended',
