@@ -2,7 +2,7 @@
 # https://smithery.ai/docs/config
 
 startCommand:
-  type: stdio
+  type: http
   configSchema:
     type: object
     required:
@@ -18,9 +18,10 @@ startCommand:
   commandFunction: |-
     (config) => ({
       command: 'npx',
-      args: ['-y', 'readwise-mcp'],
+      args: ['-y', 'readwise-mcp', '--transport', 'sse'],
       env: {
         READWISE_API_KEY: config.readwiseApiKey,
-        DEBUG: config.debug ? 'true' : 'false'
+        DEBUG: config.debug ? 'true' : 'false',
+        PORT: process.env.PORT || '8081'
       }
     })
