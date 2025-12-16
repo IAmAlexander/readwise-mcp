@@ -327,6 +327,24 @@ export class ReadwiseMCPServer {
         })
       });
     });
+
+    // MCP HTTP endpoint for Smithery and other HTTP-based clients
+    this.app.post('/mcp', (req: Request, res: Response) => {
+      const requestId = req.body?.request_id;
+      
+      if (!requestId) {
+        res.status(400).json({
+          error: 'Missing request_id'
+        });
+        return;
+      }
+      
+      // Handle the request
+      this.handleMCPRequest(req.body, (response) => {
+        // Send the response back
+        res.json(response);
+      });
+    });
   }
   
   /**

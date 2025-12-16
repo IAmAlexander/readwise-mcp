@@ -17,8 +17,8 @@ startCommand:
         default: false
   commandFunction: |-
     (config) => ({
-      command: 'npx',
-      args: ['-y', 'readwise-mcp', '--transport', 'sse'],
+      command: 'node',
+      args: ['dist/index.js', '--transport', 'sse'],
       env: {
         READWISE_API_KEY: config.readwiseApiKey,
         DEBUG: config.debug ? 'true' : 'false',
