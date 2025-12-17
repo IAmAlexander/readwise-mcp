@@ -29,8 +29,9 @@ describe('ReadwiseClient', () => {
   });
 
   describe('constructor', () => {
-    it('should throw error when API key is not provided', () => {
-      expect(() => new ReadwiseClient({ apiKey: '' })).toThrow('Readwise API key is required');
+    it('should allow empty API key for lazy loading', () => {
+      // API key is now optional to support Smithery's lazy loading pattern
+      expect(() => new ReadwiseClient({ apiKey: '' })).not.toThrow();
     });
 
     it('should create client with default configuration', () => {

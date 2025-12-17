@@ -100,7 +100,9 @@ const toolSchemas: Record<string, Record<string, z.ZodType>> = {
     query: z.string().describe("The search query to find highlights"),
     limit: z.number().optional().describe("Maximum number of results to return"),
   },
-  get_tags: {},
+  get_tags: {
+    // No parameters - returns all tags
+  },
   document_tags: {
     document_id: z.string().describe("The ID of the document"),
     operation: z.enum(['get', 'update', 'add', 'remove']).describe("The operation to perform"),
