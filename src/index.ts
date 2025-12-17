@@ -107,6 +107,18 @@ async function main() {
     try {
       await server.start();
       logger.info('Server started successfully');
+      logger.info(`Server is running and ready to accept connections`);
+      
+      // Keep the process alive - important for containerized deployments
+      // The server will continue running until explicitly stopped
+      setInterval(() => {
+        // Periodic heartbeat to ensure process stays alive
+        // This helps detect if the process is still responsive
+        if (process.uptime() % 60 === 0) {
+          logger.debug(`Server heartbeat: uptime ${Math.floor(process.uptime())}s`);
+        }
+      }, 10000); // Every 10 seconds
+      
     } catch (error) {
       logger.error('Failed to start server:', error as any);
       process.exit(1);
@@ -115,7 +127,12 @@ async function main() {
     // Handle shutdown gracefully
     const shutdown = async () => {
       logger.info('Shutting down...');
-      await server.stop();
+      try {
+        await server.stop();
+        logger.info('Server stopped successfully');
+      } catch (error) {
+        logger.error('Error stopping server:', error as any);
+      }
       process.exit(0);
     };
     
@@ -125,8 +142,8 @@ async function main() {
     // Handle unhandled errors - log but don't exit immediately to allow health checks
     process.on('uncaughtException', (error) => {
       logger.error('Uncaught exception', error);
-      // Don't exit immediately - allow health checks to still work
-      // shutdown();
+      // Log but don't exit - allow health checks to still work
+      // In production, you might want to exit here, but for Smithery we want to stay alive
     });
     
     process.on('unhandledRejection', (reason, promise) => {
