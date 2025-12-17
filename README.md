@@ -1,5 +1,7 @@
 # Readwise MCP Server
 
+[![smithery badge](https://smithery.ai/badge/@IAmAlexander/readwise-mcp)](https://smithery.ai/server/@IAmAlexander/readwise-mcp)
+
 A Model Context Protocol (MCP) server for accessing and interacting with your Readwise library.
 
 ## Features
