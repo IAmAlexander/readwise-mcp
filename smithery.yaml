@@ -32,6 +32,6 @@ startCommand:
         PORT: process.env.PORT || '8081'
       }
     })
-  testConfig:
+  exampleConfig:
     readwiseApiKey: 'test-key-for-scanning'
     debug: false
