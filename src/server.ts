@@ -137,6 +137,8 @@ export class ReadwiseMCPServer {
         : null; // null means allow all origins
 
       if (corsEnabled) {
+        // Configure CORS according to Smithery requirements
+        // See: https://smithery.ai/docs/build/deployments/containers#how-do-i-set-up-cors-handling
         this.app.use(cors({
           origin: (origin, callback) => {
             // Allow requests with no origin (like mobile apps, curl, or health checks)
@@ -154,7 +156,8 @@ export class ReadwiseMCPServer {
             }
           },
           methods: ['GET', 'POST', 'OPTIONS'],
-          allowedHeaders: ['Content-Type', 'Authorization'],
+          allowedHeaders: ['Content-Type', 'Authorization', '*'], // Allow all headers as per Smithery docs
+          exposedHeaders: ['mcp-session-id', 'mcp-protocol-version'], // Expose MCP-specific headers
           credentials: true
         }));
       }
@@ -410,7 +413,16 @@ export class ReadwiseMCPServer {
       });
     });
 
+    // Handle OPTIONS preflight requests for /mcp endpoint
+    // Required for CORS preflight checks from Smithery
+    this.app.options('/mcp', (_req: Request, res: Response) => {
+      this.logger.debug('OPTIONS preflight request for /mcp');
+      // CORS middleware should handle this, but ensure headers are set
+      res.status(204).end();
+    });
+
     // MCP HTTP endpoint for Smithery and other HTTP-based clients
+    // Must implement MCP Streamable HTTP transport as per Smithery requirements
     this.app.post('/mcp', (req: Request, res: Response) => {
       const requestId = req.body?.request_id;
       
@@ -431,6 +443,8 @@ export class ReadwiseMCPServer {
       
       // Handle the request
       this.handleMCPRequest(req.body, (response) => {
+        // Ensure MCP-specific headers are set (CORS middleware should handle this, but be explicit)
+        res.setHeader('Access-Control-Expose-Headers', 'mcp-session-id, mcp-protocol-version');
         // Send the response back
         res.json(response);
       });

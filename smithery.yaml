@@ -1,5 +1,11 @@
 # Smithery configuration for Readwise MCP Server
 # https://smithery.ai/docs/config
+# Using Docker container deployment as per: https://smithery.ai/docs/build/deployments/containers
+
+runtime: "container"
+build:
+  dockerfile: "Dockerfile"
+  dockerBuildPath: "."
 
 startCommand:
   type: http
