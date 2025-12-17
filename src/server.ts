@@ -176,6 +176,10 @@ export class ReadwiseMCPServer {
     
     // Set up routes BEFORE starting the server
     this.setupRoutes();
+    
+    // Set up SSE transport routes BEFORE starting the server
+    // (SSE endpoint setup happens here, actual transport connection happens on /sse request)
+    this.setupSSERoutes();
   }
 
   /**
@@ -253,24 +257,33 @@ export class ReadwiseMCPServer {
    * Start the server
    */
   async start(): Promise<void> {
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
       this.logger.debug('Starting HTTP server...');
       // Routes are already set up in constructor
       // Start the HTTP server - bind to all interfaces (0.0.0.0) for containerized deployments
+      
+      // Handle server errors
+      this.server.on('error', (error: NodeJS.ErrnoException) => {
+        this.logger.error('Server error:', error);
+        if (error.code === 'EADDRINUSE') {
+          reject(new Error(`Port ${this.port} is already in use`));
+        } else {
+          reject(error);
+        }
+      });
+      
       this.server.listen(this.port, '0.0.0.0', () => {
         this.logger.info(`Server started on port ${this.port} with ${this.transportType} transport`);
         this.logger.info(`Startup time: ${Date.now() - this.startTime}ms`);
+        this.logger.info(`Health check available at http://0.0.0.0:${this.port}/health`);
         
         // If using stdio transport, set up stdin handler
         if (this.transportType === 'stdio') {
           this.logger.debug('Setting up stdio transport...');
           this.setupStdioTransport();
           this.logger.debug('Stdio transport configured');
-        } else if (this.transportType === 'sse') {
-          this.logger.debug('Setting up SSE transport...');
-          this.setupSSETransport();
-          this.logger.debug('SSE transport configured');
         }
+        // SSE routes are already set up in constructor via setupSSERoutes()
         
         this.logger.info('Server initialization complete');
         resolve();
@@ -301,15 +314,24 @@ export class ReadwiseMCPServer {
   private setupRoutes(): void {
     this.logger.debug('Setting up routes');
     
-    // Health check endpoint
+    // Health check endpoint - must be accessible without authentication
     this.app.get('/health', (_req: Request, res: Response) => {
-      res.json({
-        status: 'ok',
-        uptime: process.uptime(),
-        transport: this.transportType,
-        tools: this.toolRegistry.getNames(),
-        prompts: this.promptRegistry.getNames()
-      });
+      try {
+        res.json({
+          status: 'ok',
+          uptime: process.uptime(),
+          transport: this.transportType,
+          tools: this.toolRegistry.getNames().length,
+          prompts: this.promptRegistry.getNames().length,
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        this.logger.error('Error in health check:', error);
+        res.status(500).json({
+          status: 'error',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
     });
 
     // Capabilities endpoint
@@ -668,10 +690,10 @@ export class ReadwiseMCPServer {
   }
 
   /**
-   * Set up SSE transport
+   * Set up SSE routes (called before server starts)
    */
-  private setupSSETransport(): void {
-    this.logger.debug('Setting up SSE transport');
+  private setupSSERoutes(): void {
+    this.logger.debug('Setting up SSE routes');
 
     // SSE endpoint for server-to-client streaming
     this.app.get('/sse', async (req: Request, res: Response) => {
