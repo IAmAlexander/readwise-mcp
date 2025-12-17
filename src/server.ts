@@ -96,90 +96,97 @@ export class ReadwiseMCPServer {
     transport: TransportType = 'stdio',
     baseUrl?: string
   ) {
-    // Check if running under MCP Inspector
-    const isMCPInspector = process.env.MCP_INSPECTOR === 'true' || 
-                          process.argv.includes('--mcp-inspector') ||
-                          process.env.NODE_ENV === 'mcp-inspector';
-    
-    // When running under inspector:
-    // - Use port 3000 (required for inspector's proxy)
-    // - Force SSE transport
-    this.port = isMCPInspector ? 3000 : port;
-    this.transportType = isMCPInspector ? 'sse' : transport;
-    this.logger = logger;
-    this.startTime = Date.now();
+    try {
+      // Check if running under MCP Inspector
+      const isMCPInspector = process.env.MCP_INSPECTOR === 'true' || 
+                            process.argv.includes('--mcp-inspector') ||
+                            process.env.NODE_ENV === 'mcp-inspector';
+      
+      // When running under inspector:
+      // - Use port 3000 (required for inspector's proxy)
+      // - Force SSE transport
+      this.port = isMCPInspector ? 3000 : port;
+      this.transportType = isMCPInspector ? 'sse' : transport;
+      this.logger = logger;
+      this.startTime = Date.now();
 
-    // Initialize API client (allow empty API key for lazy loading)
-    // API key will be validated when tools are actually called
-    this.apiClient = new ReadwiseClient({
-      apiKey: apiKey || '',
-      baseUrl
-    });
-    
-    this.api = new ReadwiseAPI(this.apiClient);
+      // Initialize API client (allow empty API key for lazy loading)
+      // API key will be validated when tools are actually called
+      this.apiClient = new ReadwiseClient({
+        apiKey: apiKey || '',
+        baseUrl
+      });
+      
+      this.api = new ReadwiseAPI(this.apiClient);
 
-    // Initialize registries
-    this.toolRegistry = new ToolRegistry(this.logger);
-    this.promptRegistry = new PromptRegistry(this.logger);
+      // Initialize registries
+      this.toolRegistry = new ToolRegistry(this.logger);
+      this.promptRegistry = new PromptRegistry(this.logger);
 
-    // Initialize Express app
-    this.app = express();
-    this.app.use(bodyParser.json());
+      // Initialize Express app
+      this.app = express();
+      this.app.use(bodyParser.json());
 
-    // Configure CORS - allow all origins for Smithery and other hosted deployments
-    // In production, you can restrict this via CORS_ALLOWED_ORIGINS environment variable
-    const corsEnabled = process.env.CORS_ENABLED !== 'false';
-    const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
-      ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim())
-      : null; // null means allow all origins
+      // Configure CORS - allow all origins for Smithery and other hosted deployments
+      // In production, you can restrict this via CORS_ALLOWED_ORIGINS environment variable
+      const corsEnabled = process.env.CORS_ENABLED !== 'false';
+      const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+        ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim())
+        : null; // null means allow all origins
 
-    if (corsEnabled) {
-      this.app.use(cors({
-        origin: (origin, callback) => {
-          // Allow requests with no origin (like mobile apps, curl, or health checks)
-          if (!origin) return callback(null, true);
-          
-          // If no specific origins configured, allow all (for Smithery and hosted deployments)
-          if (!allowedOrigins) {
-            return callback(null, true);
-          }
+      if (corsEnabled) {
+        this.app.use(cors({
+          origin: (origin, callback) => {
+            // Allow requests with no origin (like mobile apps, curl, or health checks)
+            if (!origin) return callback(null, true);
+            
+            // If no specific origins configured, allow all (for Smithery and hosted deployments)
+            if (!allowedOrigins) {
+              return callback(null, true);
+            }
 
-          if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-            callback(null, true);
-          } else {
-            callback(new Error('Not allowed by CORS'));
-          }
-        },
-        methods: ['GET', 'POST', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
-        credentials: true
-      }));
-    }
-    this.server = createServer(this.app);
-
-    // Initialize MCP Server
-    this.mcpServer = new MCPServer({
-      name: packageJson.name,
-      version: packageJson.version
-    }, {
-      capabilities: {
-        tools: this.toolRegistry.getNames().reduce((acc, name) => ({ ...acc, [name]: true }), {}),
-        prompts: this.promptRegistry.getNames().reduce((acc, name) => ({ ...acc, [name]: true }), {})
+            if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+              callback(null, true);
+            } else {
+              callback(new Error('Not allowed by CORS'));
+            }
+          },
+          methods: ['GET', 'POST', 'OPTIONS'],
+          allowedHeaders: ['Content-Type', 'Authorization'],
+          credentials: true
+        }));
       }
-    });
+      this.server = createServer(this.app);
 
-    // Register tools
-    this.registerTools();
-    
-    // Register prompts
-    this.registerPrompts();
-    
-    // Set up routes BEFORE starting the server
-    this.setupRoutes();
-    
-    // Set up SSE transport routes BEFORE starting the server
-    // (SSE endpoint setup happens here, actual transport connection happens on /sse request)
-    this.setupSSERoutes();
+      // Register tools and prompts BEFORE creating MCP Server
+      // so capabilities can be properly initialized
+      this.registerTools();
+      this.registerPrompts();
+
+      // Initialize MCP Server with actual capabilities
+      this.mcpServer = new MCPServer({
+        name: packageJson.name,
+        version: packageJson.version
+      }, {
+        capabilities: {
+          tools: this.toolRegistry.getNames().reduce((acc, name) => ({ ...acc, [name]: true }), {}),
+          prompts: this.promptRegistry.getNames().reduce((acc, name) => ({ ...acc, [name]: true }), {})
+        }
+      });
+      
+      // Set up routes BEFORE starting the server
+      this.setupRoutes();
+      
+      // Set up SSE transport routes BEFORE starting the server
+      // (SSE endpoint setup happens here, actual transport connection happens on /sse request)
+      this.setupSSERoutes();
+      
+      this.logger.debug('Server constructor completed successfully');
+    } catch (error) {
+      this.logger.error('Error in server constructor:', error as any);
+      // Re-throw to prevent server from starting in an invalid state
+      throw error;
+    }
   }
 
   /**
