@@ -20,13 +20,15 @@ import readline from 'readline';
  * Main entry point for the Readwise MCP server
  */
 async function main() {
-  const argv = yargs(hideBin(process.argv))
-    .option('port', {
-      alias: 'p',
-      description: 'Port to listen on',
-      type: 'number',
-      default: process.env.PORT ? parseInt(process.env.PORT) : 3001
-    })
+  // Ensure we catch any top-level errors
+  try {
+    const argv = yargs(hideBin(process.argv))
+      .option('port', {
+        alias: 'p',
+        description: 'Port to listen on',
+        type: 'number',
+        default: process.env.PORT ? parseInt(process.env.PORT, 10) : 8081
+      })
     .option('transport', {
       alias: 't',
       description: 'Transport type (stdio or sse)',
@@ -153,6 +155,13 @@ async function main() {
     
   } catch (error) {
     logger.error('Error starting server', error as any);
+    if (error instanceof Error) {
+      logger.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      } as any);
+    }
     process.exit(1);
   }
 }
@@ -234,8 +243,23 @@ async function runSetupWizard(): Promise<string> {
   return apiKey;
 }
 
-// Start the server
+// Start the server with comprehensive error handling
 main().catch((error) => {
-  console.error('Error:', error instanceof Error ? error.message : String(error));
+  console.error('Fatal error starting server:', error);
+  if (error instanceof Error) {
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+  } else {
+    console.error('Non-Error object:', error);
+  }
   process.exit(1);
+});
+
+// Ensure process doesn't exit unexpectedly
+process.on('beforeExit', (code) => {
+  console.error(`Process about to exit with code ${code}`);
+});
+
+process.on('exit', (code) => {
+  console.error(`Process exiting with code ${code}`);
 });

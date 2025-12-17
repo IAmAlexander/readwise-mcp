@@ -15,12 +15,13 @@ COPY src ./src
 # Install dev dependencies for build, build, then remove
 RUN npm install && npm run build && npm prune --production
 
-# Expose port for SSE transport
-EXPOSE 3001
+# Expose port (Smithery will set PORT env var)
+EXPOSE 8081
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1
+# Health check - use PORT env var or default to 8081
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-8081}/health || exit 1
 
 # Run with SSE transport for hosted deployment
+# PORT is set by Smithery automatically
 CMD ["node", "dist/index.js", "--transport", "sse"]
