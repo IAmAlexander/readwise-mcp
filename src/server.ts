@@ -96,6 +96,9 @@ export class ReadwiseMCPServer {
     transport: TransportType = 'stdio',
     baseUrl?: string
   ) {
+    // Assign logger first so it's available in error handling
+    this.logger = logger;
+    
     try {
       // Check if running under MCP Inspector
       const isMCPInspector = process.env.MCP_INSPECTOR === 'true' || 
@@ -107,7 +110,6 @@ export class ReadwiseMCPServer {
       // - Force SSE transport
       this.port = isMCPInspector ? 3000 : port;
       this.transportType = isMCPInspector ? 'sse' : transport;
-      this.logger = logger;
       this.startTime = Date.now();
 
       // Initialize API client (allow empty API key for lazy loading)
