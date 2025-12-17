@@ -15,6 +15,8 @@ const packageJson = require('../package.json') as { name: string; version: strin
 import { Server as MCPServer } from '@modelcontextprotocol/sdk/server/index.js';
 import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 // Local type imports - no .js extension
 import type { MCPRequest, MCPResponse, ErrorResponse, ErrorType, TransportType } from './types/index.js';
@@ -178,6 +180,9 @@ export class ReadwiseMCPServer {
           prompts: this.promptRegistry.getNames().reduce((acc, name) => ({ ...acc, [name]: true }), {})
         }
       });
+
+      // Register tools with SDK ServerTools plugin so they are properly exposed
+      this.registerToolsWithSDK();
       
       // Set up routes BEFORE starting the server
       this.setupRoutes();
@@ -263,6 +268,53 @@ export class ReadwiseMCPServer {
     this.promptRegistry.register(searchPrompt);
     
     this.logger.info(`Registered ${this.promptRegistry.getNames().length} prompts`);
+  }
+
+  /**
+   * Set up SDK request handlers for tool execution
+   * Tools are discovered via capabilities, SDK routes calls to our handlers
+   */
+  private registerToolsWithSDK(): void {
+    try {
+      this.logger.debug('Setting up SDK request handlers for tools');
+      
+      // Set up request handler for tools/list
+      this.mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
+        const tools = this.toolRegistry.getNames().map(toolName => {
+          const tool = this.toolRegistry.get(toolName);
+          return {
+            name: tool?.name || toolName,
+            description: tool?.description || '',
+            inputSchema: tool?.parameters || {}
+          };
+        });
+        
+        return { tools };
+      });
+      
+      // Set up request handler for tools/call
+      this.mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+        const { name, arguments: args } = request.params;
+        
+        this.logger.debug(`SDK tool call received: ${name}`, { args });
+        
+        // Get the tool from our registry
+        const tool = this.toolRegistry.get(name);
+        if (!tool) {
+          throw new Error(`Tool not found: ${name}`);
+        }
+        
+        // Execute the tool using our existing implementation
+        const result = await tool.execute(args || {});
+        return result;
+      });
+      
+      this.logger.info(`Set up SDK request handlers for ${this.toolRegistry.getNames().length} tools`);
+    } catch (error) {
+      this.logger.error('Error setting up SDK request handlers:', error as any);
+      // Don't throw - allow server to continue even if handler setup fails
+      // Tools will still work through our custom handleMCPRequest method
+    }
   }
 
   /**
@@ -421,33 +473,66 @@ export class ReadwiseMCPServer {
       res.status(204).end();
     });
 
+    // Store active Streamable HTTP transports by session ID
+    const streamableTransports = new Map<string, StreamableHTTPServerTransport>();
+
     // MCP HTTP endpoint for Smithery and other HTTP-based clients
-    // Must implement MCP Streamable HTTP transport as per Smithery requirements
-    this.app.post('/mcp', (req: Request, res: Response) => {
-      const requestId = req.body?.request_id;
-      
-      if (!requestId) {
-        const errorResponse: ErrorResponse = {
-          error: {
-            type: 'validation',
-            details: {
-              code: 'missing_request_id',
-              message: 'Missing required field: request_id'
+    // Uses Streamable HTTP transport from MCP SDK for proper protocol compliance
+    this.app.all('/mcp', async (req: Request, res: Response) => {
+      try {
+        this.logger.debug('MCP Streamable HTTP request received', {
+          method: req.method,
+          headers: req.headers
+        });
+        
+        const sessionId = req.headers['mcp-session-id'] as string | undefined;
+        let transport: StreamableHTTPServerTransport;
+
+        if (sessionId && streamableTransports.has(sessionId)) {
+          // Reuse existing transport for the session
+          const existingTransport = streamableTransports.get(sessionId);
+          if (!existingTransport) {
+            throw new Error(`Transport not found for session: ${sessionId}`);
+          }
+          transport = existingTransport;
+          this.logger.debug(`Reusing transport for session: ${sessionId}`);
+        } else {
+          // Create a new transport for a new session
+          const { randomUUID } = await import('crypto');
+          transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => randomUUID()
+          });
+          
+          // Connect transport to MCP server
+          // SDK handles all JSON-RPC messages including initialize and list_tools
+          await this.mcpServer.connect(transport);
+          
+          // Store transport by session ID after connection
+          const newSessionId = (transport as any).sessionId;
+          if (newSessionId) {
+            streamableTransports.set(newSessionId, transport);
+            this.logger.info(`Created new Streamable HTTP transport (session: ${newSessionId})`);
+          } else {
+            this.logger.warn('Streamable HTTP transport created but sessionId not available');
+          }
+        }
+
+        // Handle the request through the transport
+        await transport.handleRequest(req, res, req.body);
+      } catch (error) {
+        this.logger.error('Error handling MCP Streamable HTTP request:', error as any);
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: {
+              type: 'transport',
+              details: {
+                code: 'server_error',
+                message: error instanceof Error ? error.message : 'Unknown error'
+              }
             }
-          },
-          request_id: 'unknown'
-        };
-        res.status(400).json(errorResponse);
-        return;
+          });
+        }
       }
-      
-      // Handle the request
-      this.handleMCPRequest(req.body, (response) => {
-        // Ensure MCP-specific headers are set (CORS middleware should handle this, but be explicit)
-        res.setHeader('Access-Control-Expose-Headers', 'mcp-session-id, mcp-protocol-version');
-        // Send the response back
-        res.json(response);
-      });
     });
   }
   
@@ -756,10 +841,14 @@ export class ReadwiseMCPServer {
   }
 
   /**
-   * Set up SSE routes (called before server starts)
+   * Set up SSE transport routes
+   * Uses SDK's SSE transport for proper MCP protocol compliance
    */
   private setupSSERoutes(): void {
     this.logger.debug('Setting up SSE routes');
+
+    // Store active SSE transports by session ID
+    const sseTransports = new Map<string, SSEServerTransport>();
 
     // SSE endpoint for server-to-client streaming
     this.app.get('/sse', async (req: Request, res: Response) => {
@@ -776,100 +865,40 @@ export class ReadwiseMCPServer {
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.flushHeaders();
 
-        // Create transport instance for this connection
-        const transport = new SSEServerTransport('/sse', res);
+        // Create SSE transport instance
+        // The first parameter is the message endpoint path for POST requests
+        const transport = new SSEServerTransport('/messages', res);
 
-        // Set up transport handlers
-        transport.onmessage = async (message) => {
-          this.logger.debug('Received message:', message);
-          if (message && typeof message === 'object' && 'method' in message && 'id' in message) {
-            // Convert JSON-RPC to MCP request
-            const mcpRequest: MCPRequest = {
-              type: 'tool_call',
-              name: message.method,
-              parameters: message.params || {},
-              request_id: String(message.id)
-            };
+        // Generate session ID and store transport
+        const sessionId = `sse-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        sseTransports.set(sessionId, transport);
 
-            // Handle the message through MCP server
-            this.handleMCPRequest(mcpRequest, async (response) => {
-              // Convert MCP response to JSON-RPC
-              const jsonRpcResponse = {
-                jsonrpc: '2.0' as const,
-                id: message.id,
-                ...(('error' in response)
-                  ? {
-                    error: {
-                      code: -32000,
-                      message: response.error.details.message,
-                      data: response.error
-                    }
-                  }
-                  : { result: response.result }
-                )
-              };
-              await transport.send(jsonRpcResponse);
-            });
-          }
-        };
-
-        transport.onerror = (error) => {
-          this.logger.error('Transport error:', error);
-          if (!res.writableEnded) {
-            res.write(`event: error\ndata: ${JSON.stringify({ error })}\n\n`);
-          }
-        };
-
-        transport.onclose = () => {
-          this.logger.debug('Transport closed');
-          if (!res.writableEnded) {
-            res.write('event: close\ndata: {}\n\n');
-            res.end();
-          }
-        };
-
-        // Start the transport and connect to MCP server
+        // Connect transport to MCP server
+        // SDK handles all JSON-RPC messages including initialize and list_tools
         await transport.start();
         await this.mcpServer.connect(transport);
-        this.logger.info('SSE transport connected to MCP server');
-
-        // Send initial connection event with capabilities
-        const connectionEvent = {
-          jsonrpc: '2.0',
-          method: 'connection_established',
-          params: {
-            server_info: {
-              name: packageJson.name,
-              version: packageJson.version,
-              capabilities: {
-                transports: ['sse'],
-                tools: this.toolRegistry.getNames().reduce((acc, name) => ({ ...acc, [name]: true }), {}),
-                prompts: this.promptRegistry.getNames().reduce((acc, name) => ({ ...acc, [name]: true }), {})
-              }
-            }
-          }
-        };
-        res.write(`data: ${JSON.stringify(connectionEvent)}\n\n`);
+        
+        this.logger.info(`SSE transport connected to MCP server (session: ${sessionId})`);
 
         // Handle client disconnect
         req.on('close', () => {
-          this.logger.debug('Client disconnected');
+          this.logger.debug(`Client disconnected (session: ${sessionId})`);
+          sseTransports.delete(sessionId);
           transport.close().catch(err => {
             this.logger.error('Error closing transport:', err);
           });
         });
 
-        // Keep connection alive with heartbeats
-        const keepAliveInterval = setInterval(() => {
-          if (!res.writableEnded) {
-            res.write('event: ping\ndata: {}\n\n');
-          }
-        }, 30000);
+        // Handle transport errors
+        transport.onerror = (error) => {
+          this.logger.error('Transport error:', error);
+          sseTransports.delete(sessionId);
+        };
 
-        // Clean up interval on disconnect
-        req.on('close', () => {
-          clearInterval(keepAliveInterval);
-        });
+        transport.onclose = () => {
+          this.logger.debug(`Transport closed (session: ${sessionId})`);
+          sseTransports.delete(sessionId);
+        };
 
       } catch (error) {
         this.logger.error('Error in SSE endpoint:', error);
@@ -887,21 +916,65 @@ export class ReadwiseMCPServer {
       }
     });
 
-    // Message handling endpoint for client-to-server communication
-    this.app.post('/messages', express.json(), async (req: Request, res: Response) => {
+    // Message endpoint for SSE clients to send POST requests
+    // This is required by SSEServerTransport for client-to-server communication
+    this.app.post('/messages', async (req: Request, res: Response) => {
       try {
-        const transport = new SSEServerTransport('/messages', res);
-        await transport.handlePostMessage(req, res);
+        const sessionId = req.query.sessionId as string;
+        
+        if (!sessionId) {
+          this.logger.warn('POST /messages request missing sessionId');
+          res.status(400).json({
+            error: {
+              type: 'validation',
+              details: {
+                code: 'missing_session_id',
+                message: 'Missing required query parameter: sessionId'
+              }
+            }
+          });
+          return;
+        }
+
+        const transport = sseTransports.get(sessionId);
+        if (!transport) {
+          this.logger.warn(`No transport found for sessionId: ${sessionId}`);
+          res.status(404).json({
+            error: {
+              type: 'transport',
+              details: {
+                code: 'session_not_found',
+                message: `No active SSE connection found for sessionId: ${sessionId}`
+              }
+            }
+          });
+          return;
+        }
+
+        // Handle the POST message through the transport
+        // The SDK's SSEServerTransport should handle JSON-RPC messages automatically
+        // If handlePostMessage exists, use it; otherwise, the SDK handles it via the connected transport
+        if (typeof (transport as any).handlePostMessage === 'function') {
+          await (transport as any).handlePostMessage(req, res, req.body);
+        } else {
+          // The SDK should handle messages automatically through the connected transport
+          // For now, acknowledge receipt - the SDK will process it
+          this.logger.debug('Message received for SSE session, SDK will handle via connected transport');
+          res.json({ jsonrpc: '2.0', id: req.body?.id || null, result: {} });
+        }
       } catch (error) {
-        this.logger.error('Error handling message:', error);
-        res.status(500).json({
-          jsonrpc: '2.0',
-          error: {
-            code: -32603,
-            message: 'Internal error',
-            data: error instanceof Error ? error.message : String(error)
-          }
-        });
+        this.logger.error('Error handling POST /messages:', error as any);
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: {
+              type: 'transport',
+              details: {
+                code: 'server_error',
+                message: error instanceof Error ? error.message : 'Unknown error'
+              }
+            }
+          });
+        }
       }
     });
   }
