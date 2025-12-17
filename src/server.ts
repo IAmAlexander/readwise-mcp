@@ -267,13 +267,15 @@ export class ReadwiseMCPServer {
    */
   async start(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      this.logger.debug('Starting HTTP server...');
-      // Routes are already set up in constructor
-      // Start the HTTP server - bind to all interfaces (0.0.0.0) for containerized deployments
+      this.logger.info('Starting HTTP server...');
+      this.logger.info(`Binding to 0.0.0.0:${this.port}`);
+      this.logger.debug('Routes are already set up in constructor');
       
-      // Handle server errors
+      // Handle server errors BEFORE listening
       this.server.on('error', (error: NodeJS.ErrnoException) => {
-        this.logger.error('Server error:', error);
+        this.logger.error('Server error event:', error);
+        this.logger.error('Error code:', error.code);
+        this.logger.error('Error message:', error.message);
         if (error.code === 'EADDRINUSE') {
           reject(new Error(`Port ${this.port} is already in use`));
         } else {
@@ -281,10 +283,16 @@ export class ReadwiseMCPServer {
         }
       });
       
+      // Log when server starts listening
       this.server.listen(this.port, '0.0.0.0', () => {
-        this.logger.info(`Server started on port ${this.port} with ${this.transportType} transport`);
-        this.logger.info(`Startup time: ${Date.now() - this.startTime}ms`);
-        this.logger.info(`Health check available at http://0.0.0.0:${this.port}/health`);
+        const address = this.server.address();
+        this.logger.info(`✓ Server started successfully on port ${this.port}`);
+        this.logger.info(`✓ Listening on ${typeof address === 'string' ? address : `${address?.address}:${address?.port}`}`);
+        this.logger.info(`✓ Transport type: ${this.transportType}`);
+        this.logger.info(`✓ Startup time: ${Date.now() - this.startTime}ms`);
+        this.logger.info(`✓ Health check: http://0.0.0.0:${this.port}/health`);
+        this.logger.info(`✓ Tools registered: ${this.toolRegistry.getNames().length}`);
+        this.logger.info(`✓ Prompts registered: ${this.promptRegistry.getNames().length}`);
         
         // If using stdio transport, set up stdin handler
         if (this.transportType === 'stdio') {
@@ -294,8 +302,14 @@ export class ReadwiseMCPServer {
         }
         // SSE routes are already set up in constructor via setupSSERoutes()
         
-        this.logger.info('Server initialization complete');
+        this.logger.info('✓ Server initialization complete - ready to accept connections');
         resolve();
+      });
+      
+      // Also log when server is listening (additional confirmation)
+      this.server.on('listening', () => {
+        const address = this.server.address();
+        this.logger.debug('Server listening event fired', { address });
       });
     });
   }
@@ -360,6 +374,16 @@ export class ReadwiseMCPServer {
           message: error instanceof Error ? error.message : 'Unknown error'
         });
       }
+    });
+
+    // OAuth metadata endpoint - Smithery checks this during deployment
+    // We use API key auth, not OAuth, so return 404 to indicate OAuth not supported
+    this.app.get('/.well-known/oauth-authorization-server', (_req: Request, res: Response) => {
+      this.logger.debug('OAuth metadata requested - not supported (using API key auth)');
+      res.status(404).json({
+        error: 'oauth_not_supported',
+        message: 'This server uses API key authentication, not OAuth'
+      });
     });
 
     // Capabilities endpoint

@@ -96,19 +96,28 @@ async function main() {
     }
 
     logger.info('Initializing server...');
+    logger.info(`Port: ${argv.port}, Transport: ${argv.transport}`);
+    
     // Start the server
-    const server = new ReadwiseMCPServer(
-      apiKey,
-      argv.port,
-      logger,
-      argv.transport
-    );
+    let server: ReadwiseMCPServer;
+    try {
+      server = new ReadwiseMCPServer(
+        apiKey,
+        argv.port,
+        logger,
+        argv.transport
+      );
+      logger.info('Server instance created successfully');
+    } catch (error) {
+      logger.error('Failed to create server instance:', error as any);
+      throw error;
+    }
 
     logger.info('Starting server...');
     try {
       await server.start();
-      logger.info('Server started successfully');
-      logger.info(`Server is running and ready to accept connections`);
+      logger.info('✓ Server started successfully');
+      logger.info(`✓ Server is running and ready to accept connections on port ${argv.port}`);
       
       // Keep the process alive - important for containerized deployments
       // The server will continue running until explicitly stopped
