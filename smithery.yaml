@@ -2,3 +2,9 @@
 # https://smithery.ai/docs/config
 
 runtime: typescript
+
+# Server metadata
+name: readwise-mcp
+displayName: Readwise
+description: Access your Readwise highlights, books, and documents through MCP
+icon: https://readwise-assets.s3.amazonaws.com/static/images/favicons/apple-touch-icon.png
