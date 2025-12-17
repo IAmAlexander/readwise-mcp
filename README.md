@@ -1,5 +1,7 @@
 # Readwise MCP Server
 
+[![Install in Cursor](https://img.shields.io/badge/Install_in-Cursor-000000?style=flat-square&logo=cursor&logoColor=white)](https://cursor.com/install-mcp?name=readwise-mcp&config=eyJuYW1lIjoicmVhZHdpc2UtbWNwIiwiY29tbWFuZCI6Im5weCIsImFyZ3MiOlsiLXkiLCJyZWFkd2lzZS1tY3AiXX0K)
+[![npm version](https://img.shields.io/npm/v/readwise-mcp?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/readwise-mcp)
 [![smithery badge](https://smithery.ai/badge/@IAmAlexander/readwise-mcp)](https://smithery.ai/server/@IAmAlexander/readwise-mcp)
 
 A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server for [Readwise](https://readwise.io), allowing AI assistants to access your saved articles, books, highlights, and documents.
