@@ -258,6 +258,14 @@ The server provides 30 tools for interacting with your Readwise library:
 - **bulk_update_documents**: Update multiple documents
 - **bulk_delete_documents**: Delete multiple documents
 
+## Available Resources
+
+MCP Resources provide direct data access for LLM clients:
+
+- **books** (`readwise://books`): List of books in your Readwise library
+- **recent-highlights** (`readwise://highlights/recent`): Recent highlights from your library
+- **tags** (`readwise://tags`): List of all tags in your Readwise library
+
 ## Available Prompts
 
 - **readwise_highlight**: Process highlights from Readwise
