@@ -1,11 +1,4 @@
 # Smithery configuration for Readwise MCP Server
 # https://smithery.ai/docs/config
-# Using TypeScript runtime - Smithery handles all HTTP/transport setup automatically
 
-runtime: "typescript"
-
-# Example config for Smithery to use during scanning/auth setup
-# This allows Smithery to connect to the server without requiring user credentials
-exampleConfig:
-  readwiseApiKey: "test-key-for-scanning"
-  debug: false
+runtime: typescript
