@@ -83,14 +83,16 @@ async function main() {
     const config = getConfig();
     logger.debug('Configuration loaded');
     
-    // Get API key from command-line args or config
-    const apiKey = argv['api-key'] || config.readwiseApiKey;
+    // Get API key from command-line args, config, or environment
+    const apiKey = argv['api-key'] || config.readwiseApiKey || process.env.READWISE_API_KEY || '';
     
+    // Allow server to start without API key for Smithery scanning (lazy loading)
+    // API key will be validated when tools are actually called
     if (!apiKey) {
-      logger.error('No API key provided. Please provide an API key using the --api-key flag or run the setup wizard with --setup');
-      process.exit(1);
+      logger.warn('No API key provided. Server will start but tools will require authentication.');
+    } else {
+      logger.debug('API key provided');
     }
-    logger.debug('API key validated');
 
     logger.info('Initializing server...');
     // Start the server

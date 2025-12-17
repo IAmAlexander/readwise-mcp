@@ -30,9 +30,8 @@ export class ReadwiseClient {
    * @param config - The client configuration
    */
   constructor(config: ExtendedClientConfig) {
-    if (!config.apiKey) {
-      throw new Error('Readwise API key is required');
-    }
+    // Allow empty API key for lazy loading (authentication will be checked on first request)
+    const apiKey = config.apiKey || '';
 
     // Set up rate limiting (default: enabled with 60 requests/minute)
     const enableRateLimiting = config.enableRateLimiting !== false;
@@ -48,12 +47,17 @@ export class ReadwiseClient {
     this.enableRetry = config.enableRetry !== false;
     this.maxRetries = config.maxRetries ?? 3;
 
+    // Build headers - only include Authorization if API key is provided
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    if (apiKey) {
+      headers['Authorization'] = `Token ${apiKey}`;
+    }
+
     this.client = axios.create({
       baseURL: config.baseUrl || 'https://readwise.io/api/v2',
-      headers: {
-        'Authorization': `Token ${config.apiKey}`,
-        'Content-Type': 'application/json'
-      }
+      headers
     });
     
     // Add response interceptor for error handling
@@ -63,12 +67,21 @@ export class ReadwiseClient {
         if (error.response) {
           // The request was made and the server responded with a status code
           // that falls out of the range of 2xx
+          const status = error.response.status;
+          const isAuthError = status === 401 || status === 403;
+          
           return Promise.reject({
-            type: 'api',
+            type: isAuthError ? 'authentication' : 'api',
             details: {
-              status: error.response.status,
-              code: error.response.status === 429 ? 'rate_limit_exceeded' : 'api_error',
-              message: error.response.data?.detail || error.message
+              status,
+              code: status === 429 
+                ? 'rate_limit_exceeded' 
+                : isAuthError 
+                  ? 'authentication_required'
+                  : 'api_error',
+              message: isAuthError && !apiKey
+                ? 'Readwise API key is required. Please provide your API key from https://readwise.io/access_token'
+                : error.response.data?.detail || error.message
             }
           });
         } else if (error.request) {
@@ -82,6 +95,17 @@ export class ReadwiseClient {
           });
         } else {
           // Something happened in setting up the request that triggered an Error
+          // Check if it's due to missing API key
+          if (!apiKey && error.message?.includes('Authorization')) {
+            return Promise.reject({
+              type: 'authentication',
+              details: {
+                code: 'authentication_required',
+                message: 'Readwise API key is required. Please provide your API key from https://readwise.io/access_token'
+              }
+            });
+          }
+          
           return Promise.reject({
             type: 'transport',
             details: {

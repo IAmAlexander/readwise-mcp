@@ -90,7 +90,7 @@ export class ReadwiseMCPServer {
    * @param transport - Transport type (default: stdio)
    */
   constructor(
-    apiKey: string,
+    apiKey: string = '',
     port: number = 3000,
     logger: Logger,
     transport: TransportType = 'stdio',
@@ -109,9 +109,10 @@ export class ReadwiseMCPServer {
     this.logger = logger;
     this.startTime = Date.now();
 
-    // Initialize API client
+    // Initialize API client (allow empty API key for lazy loading)
+    // API key will be validated when tools are actually called
     this.apiClient = new ReadwiseClient({
-      apiKey,
+      apiKey: apiKey || '',
       baseUrl
     });
     
@@ -333,9 +334,17 @@ export class ReadwiseMCPServer {
       const requestId = req.body?.request_id;
       
       if (!requestId) {
-        res.status(400).json({
-          error: 'Missing request_id'
-        });
+        const errorResponse: ErrorResponse = {
+          error: {
+            type: 'validation',
+            details: {
+              code: 'missing_request_id',
+              message: 'Missing required field: request_id'
+            }
+          },
+          request_id: 'unknown'
+        };
+        res.status(400).json(errorResponse);
         return;
       }
       
@@ -552,12 +561,23 @@ export class ReadwiseMCPServer {
       })
       .catch((error: unknown) => {
         this.logger.error(`Tool ${name} execution error`, error as any);
+        
+        // Check if it's an authentication error
+        const isAuthError = error && typeof error === 'object' && 'type' in error && error.type === 'authentication';
+        const errorDetails = error && typeof error === 'object' && 'details' in error ? error.details : null;
+        
         const errorResponse: ErrorResponse = {
           error: {
-            type: 'execution' as ErrorType,
+            type: (isAuthError ? 'validation' : 'execution') as ErrorType,
             details: {
-              code: 'tool_error',
-              message: error instanceof Error ? error.message : 'Unknown error'
+              code: errorDetails && typeof errorDetails === 'object' && 'code' in errorDetails 
+                ? String(errorDetails.code)
+                : 'tool_error',
+              message: errorDetails && typeof errorDetails === 'object' && 'message' in errorDetails
+                ? String(errorDetails.message)
+                : error instanceof Error 
+                  ? error.message 
+                  : 'Unknown error'
             }
           },
           request_id: request.request_id

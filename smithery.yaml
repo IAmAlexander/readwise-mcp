@@ -18,10 +18,13 @@ startCommand:
   commandFunction: |-
     (config) => ({
       command: 'node',
-      args: ['dist/index.js', '--transport', 'sse'],
+      args: ['dist/index.js', '--transport', 'sse', '--api-key', config.readwiseApiKey || ''],
       env: {
-        READWISE_API_KEY: config.readwiseApiKey,
+        READWISE_API_KEY: config.readwiseApiKey || '',
         DEBUG: config.debug ? 'true' : 'false',
         PORT: process.env.PORT || '8081'
       }
     })
+  testConfig:
+    readwiseApiKey: 'test-key-for-scanning'
+    debug: false
