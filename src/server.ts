@@ -323,17 +323,36 @@ export class ReadwiseMCPServer {
   private setupRoutes(): void {
     this.logger.debug('Setting up routes');
     
+    // Root endpoint for basic connectivity check
+    this.app.get('/', (_req: Request, res: Response) => {
+      res.json({
+        name: packageJson.name,
+        version: packageJson.version,
+        status: 'running',
+        transport: this.transportType,
+        endpoints: {
+          health: '/health',
+          capabilities: '/capabilities',
+          sse: '/sse',
+          mcp: '/mcp'
+        }
+      });
+    });
+    
     // Health check endpoint - must be accessible without authentication
     this.app.get('/health', (_req: Request, res: Response) => {
       try {
-        res.json({
+        const health = {
           status: 'ok',
           uptime: process.uptime(),
           transport: this.transportType,
           tools: this.toolRegistry.getNames().length,
           prompts: this.promptRegistry.getNames().length,
-          timestamp: new Date().toISOString()
-        });
+          timestamp: new Date().toISOString(),
+          port: this.port
+        };
+        this.logger.debug('Health check requested', health);
+        res.json(health);
       } catch (error) {
         this.logger.error('Error in health check:', error);
         res.status(500).json({
