@@ -56,6 +56,9 @@ import { ReadwiseSearchPrompt } from './prompts/search-prompt.js';
 // Import logger interface and create a simple console logger
 import type { Logger } from './utils/logger-interface.js';
 
+// Import response converter utility
+import { toMCPResponse } from './utils/response.js';
+
 // Simple console logger for Smithery
 import { LogLevel } from './utils/logger-interface.js';
 const consoleLogger: Logger = {
@@ -160,18 +163,40 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
         },
         async (args: any) => {
           try {
-            const result = await tool.execute(args || {});
-            // Ensure result is in the correct format expected by MCP
-            // If result has a 'result' property, extract it
-            if (result && typeof result === 'object' && 'result' in result) {
-              return (result as any).result;
-            }
-            return result;
+            const toolResult = await tool.execute(args || {});
+            // Extract the actual result from MCPToolResult wrapper
+            const actualResult = toolResult && typeof toolResult === 'object' && 'result' in toolResult
+              ? (toolResult as any).result
+              : toolResult;
+            
+            // Convert to MCP content format (like Exa does)
+            // Tools must return { content: [{ type: "text", text: "..." }] } format
+            const mcpResponse = toMCPResponse(actualResult);
+            // Return just the content format expected by SDK
+            return {
+              content: mcpResponse.content.map(item => {
+                // Ensure type is exactly what SDK expects
+                if (item.type === 'text') {
+                  return {
+                    type: 'text' as const,
+                    text: item.text || ''
+                  };
+                }
+                // For other types, return as-is (cast to satisfy type checker)
+                return item as any;
+              })
+            };
           } catch (error) {
             if (config.debug) {
               console.error(`Error executing tool ${tool.name}:`, error);
             }
-            throw error;
+            // Return error in MCP format
+            return {
+              content: [{
+                type: 'text' as const,
+                text: error instanceof Error ? error.message : String(error)
+              }]
+            };
           }
         }
       );
