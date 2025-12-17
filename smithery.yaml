@@ -1,24 +1,4 @@
 # Smithery configuration for Readwise MCP Server
-# https://smithery.ai/docs/config
+# Metadata is in server.json following the MCP schema
 
 runtime: typescript
-
-# Server metadata
-name: readwise-mcp
-displayName: Readwise
-description: Access your Readwise highlights, books, and documents through MCP
-icon: https://readwise-assets.s3.amazonaws.com/static/images/favicons/apple-touch-icon.png
-
-# Configuration schema for Smithery UI
-configSchema:
-  type: object
-  properties:
-    readwiseApiKey:
-      type: string
-      title: Readwise API Key
-      description: Your Readwise API access token. Get it from https://readwise.io/access_token
-    debug:
-      type: boolean
-      title: Debug Mode
-      description: Enable verbose debug logging to troubleshoot issues
-      default: false

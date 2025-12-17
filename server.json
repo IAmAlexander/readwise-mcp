@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.github.IAmAlexander/readwise-mcp",
+  "description": "MCP server for Readwise - Access your highlights, books, documents, and reading progress through the Model Context Protocol.",
+  "version": "1.0.0",
+  "vendor": "IAmAlexander",
+  "homepage": "https://github.com/IAmAlexander/readwise-mcp",
+  "icon": "https://readwise-assets.s3.amazonaws.com/static/images/favicons/apple-touch-icon.png",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "readwise-mcp",
+      "version": "1.0.0"
+    }
+  ]
+}

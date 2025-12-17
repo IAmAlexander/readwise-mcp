@@ -2,7 +2,7 @@
   "name": "readwise-mcp",
   "version": "1.0.0",
   "description": "Readwise integration for Model Context Protocol - Access your highlights, books, and documents through MCP",
-  "icon": "https://readwise-assets.s3.amazonaws.com/static/images/favicons/apple-touch-icon.png",
+  "mcpName": "io.github.IAmAlexander/readwise-mcp",
   "type": "module",
   "main": "dist/index.js",
   "module": "./src/smithery.ts",
