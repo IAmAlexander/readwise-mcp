@@ -1,37 +1,5 @@
 # Smithery configuration for Readwise MCP Server
 # https://smithery.ai/docs/config
-# Using Docker container deployment as per: https://smithery.ai/docs/build/deployments/containers
+# Using TypeScript runtime - Smithery handles all HTTP/transport setup automatically
 
-runtime: "container"
-build:
-  dockerfile: "Dockerfile"
-  dockerBuildPath: "."
-
-startCommand:
-  type: http
-  endpoint: /mcp
-  configSchema:
-    type: object
-    required:
-      - readwiseApiKey
-    properties:
-      readwiseApiKey:
-        type: string
-        description: Your Readwise API key from https://readwise.io/access_token
-      debug:
-        type: boolean
-        description: Enable debug logging
-        default: false
-  commandFunction: |-
-    (config) => ({
-      command: 'node',
-      args: ['dist/index.js', '--transport', 'sse', '--api-key', config.readwiseApiKey || ''],
-      env: {
-        READWISE_API_KEY: config.readwiseApiKey || '',
-        DEBUG: config.debug ? 'true' : 'false'
-        // PORT is set automatically by Smithery - don't override it
-      }
-    })
-  exampleConfig:
-    readwiseApiKey: 'test-key-for-scanning'
-    debug: false
+runtime: "typescript"
