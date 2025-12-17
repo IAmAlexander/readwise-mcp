@@ -282,6 +282,23 @@ const toolSchemas: Record<string, Record<string, z.ZodType>> = {
   },
 };
 
+// Zod parameter schemas for prompts
+const promptSchemas: Record<string, Record<string, z.ZodType>> = {
+  readwise_highlight: {
+    book_id: z.string().optional().describe("The ID of the book to get highlights from"),
+    page: z.number().optional().describe("The page number of results to get"),
+    page_size: z.number().optional().describe("The number of results per page (max 100)"),
+    search: z.string().optional().describe("Search term to filter highlights"),
+    context: z.string().optional().describe("Additional context to include in the prompt"),
+    task: z.enum(['summarize', 'analyze', 'connect', 'question']).optional().describe("The task to perform with the highlights"),
+  },
+  readwise_search: {
+    query: z.string().describe("Search query to find highlights"),
+    limit: z.number().optional().describe("Maximum number of results to return"),
+    context: z.string().optional().describe("Additional context to include in the prompt"),
+  },
+};
+
 // Export stateless flag for MCP (Smithery requirement)
 export const stateless = true;
 
@@ -408,16 +425,107 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       }
     }
 
+    // Register MCP Resources
+    // These provide data access to LLM clients
+    server.resource(
+      "books",
+      "readwise://books",
+      { description: "List of books in your Readwise library", mimeType: "application/json" },
+      async () => {
+        try {
+          const books = await api.getBooks({ page_size: 50 });
+          return {
+            contents: [{
+              uri: "readwise://books",
+              mimeType: "application/json",
+              text: JSON.stringify(books.results.map(b => ({
+                id: b.id,
+                title: b.title,
+                author: b.author,
+                category: b.category,
+                highlights_count: b.highlights_count
+              })), null, 2)
+            }]
+          };
+        } catch (error) {
+          return {
+            contents: [{
+              uri: "readwise://books",
+              mimeType: "text/plain",
+              text: `Error fetching books: ${error instanceof Error ? error.message : String(error)}`
+            }]
+          };
+        }
+      }
+    );
+
+    server.resource(
+      "recent-highlights",
+      "readwise://highlights/recent",
+      { description: "Recent highlights from your Readwise library", mimeType: "application/json" },
+      async () => {
+        try {
+          const highlights = await api.getHighlights({ page_size: 20 });
+          return {
+            contents: [{
+              uri: "readwise://highlights/recent",
+              mimeType: "application/json",
+              text: JSON.stringify(highlights.results.map(h => ({
+                id: h.id,
+                text: h.text,
+                note: h.note,
+                book_id: h.book_id,
+                created_at: h.created_at
+              })), null, 2)
+            }]
+          };
+        } catch (error) {
+          return {
+            contents: [{
+              uri: "readwise://highlights/recent",
+              mimeType: "text/plain",
+              text: `Error fetching highlights: ${error instanceof Error ? error.message : String(error)}`
+            }]
+          };
+        }
+      }
+    );
+
+    server.resource(
+      "tags",
+      "readwise://tags",
+      { description: "List of all tags in your Readwise library", mimeType: "application/json" },
+      async () => {
+        try {
+          const tags = await api.getTags();
+          return {
+            contents: [{
+              uri: "readwise://tags",
+              mimeType: "application/json",
+              text: JSON.stringify(tags, null, 2)
+            }]
+          };
+        } catch (error) {
+          return {
+            contents: [{
+              uri: "readwise://tags",
+              mimeType: "text/plain",
+              text: `Error fetching tags: ${error instanceof Error ? error.message : String(error)}`
+            }]
+          };
+        }
+      }
+    );
+
     // Register prompts using server.prompt() method
     const highlightPrompt = new ReadwiseHighlightPrompt(api, consoleLogger);
     const searchPrompt = new ReadwiseSearchPrompt(api, consoleLogger);
     
-    // Register highlight prompt
-    // Use empty object {} like Exa does - validation happens in execute()
+    // Register highlight prompt with Zod schemas for parameter descriptions
     server.prompt(
       highlightPrompt.name,
       highlightPrompt.description,
-      {}, // Parameters schema - empty object accepts any params, validation in execute()
+      promptSchemas[highlightPrompt.name] || {},
       async (args: any) => {
         const result = await highlightPrompt.execute(args || {});
         // Convert MCPResponse to prompt format with messages array
@@ -442,11 +550,11 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       }
     );
 
-    // Register search prompt
+    // Register search prompt with Zod schemas for parameter descriptions
     server.prompt(
       searchPrompt.name,
       searchPrompt.description,
-      {}, // Parameters schema - empty object accepts any params, validation in execute()
+      promptSchemas[searchPrompt.name] || {},
       async (args: any) => {
         const result = await searchPrompt.execute(args || {});
         // Convert MCPResponse to prompt format with messages array
