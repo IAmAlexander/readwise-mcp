@@ -22,7 +22,6 @@ startCommand:
       env: {
         READWISE_API_KEY: config.readwiseApiKey || '',
         DEBUG: config.debug ? 'true' : 'false'
-        // PORT is set by Smithery automatically - don't override it
       }
     })
   testConfig:
