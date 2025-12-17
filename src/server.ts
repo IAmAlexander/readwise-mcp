@@ -126,27 +126,35 @@ export class ReadwiseMCPServer {
     this.app = express();
     this.app.use(bodyParser.json());
 
-    // Configure CORS - use environment variable or default to localhost origins
-    // Note: credentials: true requires specific origins, not wildcards
+    // Configure CORS - allow all origins for Smithery and other hosted deployments
+    // In production, you can restrict this via CORS_ALLOWED_ORIGINS environment variable
+    const corsEnabled = process.env.CORS_ENABLED !== 'false';
     const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
       ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim())
-      : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001'];
+      : null; // null means allow all origins
 
-    this.app.use(cors({
-      origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl)
-        if (!origin) return callback(null, true);
+    if (corsEnabled) {
+      this.app.use(cors({
+        origin: (origin, callback) => {
+          // Allow requests with no origin (like mobile apps, curl, or health checks)
+          if (!origin) return callback(null, true);
+          
+          // If no specific origins configured, allow all (for Smithery and hosted deployments)
+          if (!allowedOrigins) {
+            return callback(null, true);
+          }
 
-        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-          callback(null, true);
-        } else {
-          callback(new Error('Not allowed by CORS'));
-        }
-      },
-      methods: ['GET', 'POST', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-      credentials: true
-    }));
+          if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+            callback(null, true);
+          } else {
+            callback(new Error('Not allowed by CORS'));
+          }
+        },
+        methods: ['GET', 'POST', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        credentials: true
+      }));
+    }
     this.server = createServer(this.app);
 
     // Initialize MCP Server
@@ -165,6 +173,9 @@ export class ReadwiseMCPServer {
     
     // Register prompts
     this.registerPrompts();
+    
+    // Set up routes BEFORE starting the server
+    this.setupRoutes();
   }
 
   /**
@@ -244,15 +255,11 @@ export class ReadwiseMCPServer {
   async start(): Promise<void> {
     return new Promise<void>((resolve) => {
       this.logger.debug('Starting HTTP server...');
-      // Start the HTTP server
-      this.server.listen(this.port, () => {
+      // Routes are already set up in constructor
+      // Start the HTTP server - bind to all interfaces (0.0.0.0) for containerized deployments
+      this.server.listen(this.port, '0.0.0.0', () => {
         this.logger.info(`Server started on port ${this.port} with ${this.transportType} transport`);
         this.logger.info(`Startup time: ${Date.now() - this.startTime}ms`);
-        
-        this.logger.debug('Setting up routes...');
-        // Add routes
-        this.setupRoutes();
-        this.logger.debug('Routes configured');
         
         // If using stdio transport, set up stdin handler
         if (this.transportType === 'stdio') {
