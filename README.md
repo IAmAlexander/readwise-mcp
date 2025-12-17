@@ -1,6 +1,6 @@
 # Readwise MCP Server
 
-[![Install in Cursor](https://img.shields.io/badge/Install_in-Cursor-000000?style=flat-square&logo=cursor&logoColor=white)](https://cursor.com/install-mcp?name=readwise-mcp&config=eyJuYW1lIjoicmVhZHdpc2UtbWNwIiwiY29tbWFuZCI6Im5weCIsImFyZ3MiOlsiLXkiLCJyZWFkd2lzZS1tY3AiXX0K)
+[![Install in Cursor](https://img.shields.io/badge/Install_in-Cursor-000000?style=flat-square&logo=cursor&logoColor=white)](https://cursor.com/install-mcp?name=readwise-mcp&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vc2VydmVyLnNtaXRoZXJ5LmFpL0BJQW1BbGV4YW5kZXIvcmVhZHdpc2UtbWNwL21jcCJ9)
 [![npm version](https://img.shields.io/npm/v/readwise-mcp?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/readwise-mcp)
 [![smithery badge](https://smithery.ai/badge/@IAmAlexander/readwise-mcp)](https://smithery.ai/server/@IAmAlexander/readwise-mcp)
 
