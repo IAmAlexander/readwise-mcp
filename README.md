@@ -2,206 +2,261 @@
 
 [![smithery badge](https://smithery.ai/badge/@IAmAlexander/readwise-mcp)](https://smithery.ai/server/@IAmAlexander/readwise-mcp)
 
-A Model Context Protocol (MCP) server for accessing and interacting with your Readwise library.
+A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server for [Readwise](https://readwise.io), allowing AI assistants to access your saved articles, books, highlights, and documents.
 
 ## Features
 
-- Access highlights from your Readwise library
-- Search for highlights using natural language queries
-- Get books and documents from your library
-- Seamless integration with Claude and other MCP-compatible assistants
-- Enhanced prompt capabilities for highlight analysis
-- Transport-aware logging system
-- Robust error handling and validation
-- MCP protocol compliance with proper request_id handling
-- Health check endpoint for monitoring
-- Improved setup wizard with API key validation
-
-## Project Structure
-
-This repository is organized into the following key directories:
-
-- **src/**: Main source code for the Readwise MCP server
-- **test-scripts/**: Test scripts and utilities for validating MCP server functionality
-  - `smart-mcp-test.sh`: Main testing script for both stdio and SSE transports
-  - `run-simple-server.sh`: Script to run a simple MCP server
-  - See `test-scripts/README.md` for complete documentation
-- **examples/**: Example implementations and code samples
-  - `examples/mcp-implementations/`: Basic MCP server implementations
-  - `examples/test-clients/`: Client-side test scripts
-  - See `examples/README.md` for complete documentation
-- **dist/**: Compiled JavaScript output (generated)
-- **scripts/**: Utility scripts for development and testing
+- **Books & Articles**: Browse your collection of saved books and articles
+- **Highlights**: Access all your highlighted passages
+- **Search**: Find content across your entire Readwise library
+- **Recent Content**: Quickly retrieve your latest saved items
+- **Tag Management**: Organize and filter content with tags
+- **Advanced Search**: Powerful filtering by author, date, tags, and more
+- **Reading Progress**: Track your reading status and completion percentage
+- **Bulk Operations**: Efficiently manage multiple documents at once
+- **Content Management**: Save, update, and delete content in your library
+- **Video Support**: Access and interact with videos saved in your Readwise Reader
+- **Rate Limiting**: Smart handling of API limits to prevent throttling
+- **Transport Options**: Support for both stdio (Claude Desktop) and SSE (web) transports
+- **MCP Compliance**: Full protocol compliance with proper request_id handling
 
 ## Installation
 
-```bash
-# Install from npm
-npm install -g readwise-mcp
+### Installing via Smithery
 
-# Or clone the repository and install dependencies
-git clone https://github.com/IAmAlexander/readwise-mcp.git
-cd readwise-mcp
-npm install
-npm run build
-```
-
-## Setup
-
-Before using the server, you need to configure your Readwise API key:
+To install Readwise MCP for Claude Desktop automatically via Smithery:
 
 ```bash
-# Run the setup wizard
-npm run setup
-
-# Or start with the API key directly
-readwise-mcp --api-key YOUR_API_KEY
+npx -y @smithery/cli install @iamalexander/readwise-mcp --client claude
 ```
 
-You can get your API key from [https://readwise.io/access_token](https://readwise.io/access_token).
+### Installing Manually
 
-## Usage
+1. **Obtain a Readwise API Token**:
+   - Log in to your [Readwise account](https://readwise.io)
+   - Go to <https://readwise.io/access_token> to generate your API token
+   - Copy the token for later use
 
-### CLI
+2. **Install from npm**:
+   ```bash
+   npm install -g readwise-mcp
+   ```
 
-```bash
-# Start with stdio transport (default, for Claude Desktop)
-readwise-mcp
+3. **Or clone and build**:
+   ```bash
+   git clone https://github.com/IAmAlexander/readwise-mcp.git
+   cd readwise-mcp
+   npm install
+   npm run build
+   ```
 
-# Start with SSE transport (for web-based integrations)
-readwise-mcp --transport sse --port 3000
+4. **Configure your API key**:
+   ```bash
+   # Run the setup wizard
+   npm run setup
 
-# Enable debug logging
-readwise-mcp --debug
-```
+   # Or start with the API key directly
+   readwise-mcp --api-key YOUR_API_KEY
+   ```
 
-### API
+### Docker Support
 
-```typescript
-import { ReadwiseMCPServer } from 'readwise-mcp';
+If you prefer using Docker:
 
-const server = new ReadwiseMCPServer(
-  'YOUR_API_KEY',
-  3000, // port
-  logger,
-  'sse' // transport
-);
+1. **Create config directory**:
+   ```bash
+   mkdir -p ~/.readwise-mcp
+   ```
 
-await server.start();
-```
+2. **Build and run**:
+   ```bash
+   docker build -t readwise-mcp .
+   docker run -p 3001:3001 -e READWISE_API_KEY=your_key readwise-mcp
+   ```
 
-## Testing with MCP Inspector
+## Usage Examples
 
-The project includes built-in support for testing with the MCP Inspector. You can use either the TypeScript script or the shell script to run the inspector.
+Once connected to Claude, unleash your Readwise knowledge with questions like:
 
-### Automated Tests
+- "Find my highlights about 'vibes-first programming' and aesthetic IDEs"
+- "What did I save about Claude Code's secret Easter eggs?"
+- "Show me all articles tagged with 'AI' and 'productivity'"
+- "What's in my reading list that I haven't started yet?"
+- "Find articles by Paul Graham that I saved in the last 3 months"
+- "Show me books I've completed reading"
+- "Save this article to my Readwise: https://example.com/interesting-article"
+- "Add the tag 'must-read' to that article about quantum computing"
+- "What's my reading progress on that book about machine learning?"
 
-Run the automated test suite that verifies all tools and prompts:
+### Video-Related Examples
 
-```bash
-# Run automated inspector tests
-npm run test-inspector
+- "Show me all YouTube videos I've saved in Readwise"
+- "What highlights did I make on that video about TypeScript?"
+- "What's my current playback position for that AI conference video?"
+- "Find videos in my library that mention 'machine learning'"
+- "Create a highlight at 23:45 in the TypeScript tutorial with the note 'Important pattern'"
+- "What did the speaker say around the 15-minute mark in that AI safety video?"
+- "Show me the transcript of the programming tutorial I saved yesterday"
 
-# Run in CI mode (exits with status code)
-npm run test-inspector:ci
-```
+## Feature Documentation
 
-The test suite verifies:
-- Server startup and connection
-- Tool availability and responses
-- Prompt functionality
-- Error handling
-- Response format compliance
+### Basic Features
 
-Each test provides detailed output and a summary of passed/failed cases.
+#### Browsing Content
+- **List books and articles**: Retrieve your saved books with pagination
+- **Get highlights**: Access all your highlighted passages with filtering options
+- **Search content**: Full-text search across your entire library
+- **Get recent content**: Quickly access your latest saved items
 
-### Manual Testing
+### Tag Management
 
-### Using the Shell Script
+Organize your content with tags:
 
-```bash
-# Test with stdio transport (default)
-./scripts/inspector.sh
+- **List all tags**: Get all tags in your library
+- **Get tags for a document**: View tags on a specific document
+- **Update tags**: Replace all tags on a document
+- **Add a specific tag**: Add a single tag to a document
+- **Remove a specific tag**: Remove a tag from a document
+- **Bulk tagging**: Apply tags to multiple documents at once
 
-# Test with SSE transport
-./scripts/inspector.sh -t sse -p 3001
+### Advanced Search
 
-# Enable debug mode
-./scripts/inspector.sh -d
+Powerful filtering options for finding exactly what you need:
 
-# Full options
-./scripts/inspector.sh --transport sse --port 3001 --debug
-```
+- `query`: Search text
+- `category`: Filter by content type (book, article, etc.)
+- `tags`: Filter by tags (comma-separated)
+- `author`: Filter by author
+- `title`: Filter by title
+- `location`: Filter by location (new, later, archive, feed)
+- `dateFrom` & `dateTo`: Date range in ISO 8601 format
+- `sortBy`: Field to sort by (created_at, updated_at, title, author)
+- `sortOrder`: Sort direction (asc, desc)
 
-### Using the TypeScript Script
+### Reading Progress Tracking
 
-```bash
-# Test with stdio transport (default)
-npm run inspector
+Track your reading status and progress:
 
-# Test with SSE transport
-npm run inspector -- -t sse -p 3001
+- **Get reading progress**: View current progress on any document
+- **Update reading progress**: Set status, percentage, and page numbers
+- **Get reading list**: Filter by reading status
 
-# Enable debug mode
-npm run inspector -- -d
+Reading statuses:
+- `not_started`: Haven't begun reading
+- `in_progress`: Currently reading
+- `completed`: Finished reading
 
-# Full options
-npm run inspector -- --transport sse --port 3001 --debug
-```
+### Video Features
 
-### Available Options
+Access and interact with videos saved in your Readwise Reader:
 
-- `-t, --transport <type>`: Transport type (stdio or sse), default: stdio
-- `-p, --port <number>`: Port number for SSE transport, default: 3001
-- `-d, --debug`: Enable debug mode
+#### Video Listing and Details
 
-### Example Inspector Commands
+- **List all videos**: Browse videos from YouTube, Vimeo, and other platforms
+- **Get video details with transcript**: Access complete metadata and time-synced transcripts
 
-Test a specific tool:
-```bash
-./scripts/inspector.sh
-> tool get-highlights --parameters '{"page": 1, "page_size": 10}'
-```
+#### Video Highlights
 
-Test a prompt:
-```bash
-./scripts/inspector.sh
-> prompt search-highlights --parameters '{"query": "python"}'
-```
+- **Create highlight with timestamp**: Mark important moments in videos
+- **Get video highlights**: Retrieve all highlights for a video, sorted by timestamp
 
-List available tools and prompts:
-```bash
-./scripts/inspector.sh
-> list tools
-> list prompts
-```
+#### Video Playback Position
 
-## Testing Without a Readwise API Key
+- **Update playback position**: Save your current position for later resuming
+- **Get playback position**: Resume where you left off
 
-If you don't have a Readwise API key or don't want to use your real API key for testing, you can use the mock testing functionality:
+#### How Transcript Access Works
 
-```bash
-npm run test-mock
-```
+The video transcript feature:
+1. Extracts the time-synced transcript from the video's HTML content
+2. Parses timestamp and text pairs
+3. Returns transcript as an array of segments with timestamps
 
-This runs a test script that:
+This allows you to:
+- Search for specific content within videos
+- Create highlights at precise moments
+- Jump directly to important points
+- Reference video content with exact time context
 
-1. Creates a mock implementation of the Readwise API
-2. Sets up the MCP server with this mock API
-3. Tests various endpoints with sample data
-4. Verifies server functionality without requiring a real API key
+### Content Management
 
-The mock implementation includes:
-- Sample books, highlights, and documents
-- Simulated network delays for realistic testing
-- Error handling testing
+Save, update, and delete content:
+
+- **Save new content**: Add URLs, articles, or custom content to your library
+- **Update document**: Modify title, author, summary, tags, and more
+- **Delete document**: Remove content (with safety confirmation)
+
+### Bulk Operations
+
+Efficiently manage multiple documents at once:
+
+- **Bulk save**: Save multiple URLs/content items
+- **Bulk update**: Update multiple documents
+- **Bulk delete**: Remove multiple documents
+- **Bulk tag**: Apply tags to multiple documents
+
+#### Safety Confirmations
+
+All bulk operations and deletions require explicit confirmation to prevent accidental data loss:
+
+- **Single document deletion**: Requires confirmation parameter
+- **Bulk operations**: Require specific confirmation strings
+
+These confirmations act as a "human in the loop" safety mechanism.
+
+### API Status
+
+Check the API status and rate limit information at any time.
 
 ## Available Tools
 
-- **get_highlights**: Get highlights from your Readwise library
-- **get_books**: Get books from your Readwise library
-- **get_documents**: Get documents from your Readwise library
-- **search_highlights**: Search for highlights in your Readwise library
+The server provides 30 tools for interacting with your Readwise library:
+
+### Core Tools
+- **get_highlights**: Retrieve highlights with filtering and pagination
+- **get_books**: Get books from your library
+- **get_documents**: Get documents from your library
+- **search_highlights**: Search for highlights by query
+- **get_tags**: List all tags in your library
+- **get_recent_content**: Get recently saved content
+
+### Tag Management
+- **document_tags**: Get, update, add, or remove tags on a document
+- **bulk_tags**: Apply tags to multiple documents
+
+### Reading Progress
+- **get_reading_progress**: Get progress on a specific document
+- **update_reading_progress**: Update reading status and progress
+- **get_reading_list**: Get documents filtered by reading status
+
+### Highlight Management
+- **create_highlight**: Create a new highlight
+- **update_highlight**: Modify an existing highlight
+- **delete_highlight**: Remove a highlight
+- **create_note**: Add a note to a highlight
+
+### Search Tools
+- **advanced_search**: Powerful multi-parameter search
+- **search_by_tag**: Find content by tags
+- **search_by_date**: Find content by date range
+
+### Video Tools
+- **get_videos**: List videos in your library
+- **get_video**: Get video details with transcript
+- **create_video_highlight**: Create highlight with timestamp
+- **get_video_highlights**: Get all highlights for a video
+- **update_video_position**: Save playback position
+- **get_video_position**: Get saved playback position
+
+### Document Management
+- **save_document**: Save new content to library
+- **update_document**: Modify document metadata
+- **delete_document**: Remove a document
+
+### Bulk Operations
+- **bulk_save_documents**: Save multiple documents
+- **bulk_update_documents**: Update multiple documents
+- **bulk_delete_documents**: Delete multiple documents
 
 ## Available Prompts
 
@@ -215,28 +270,50 @@ The mock implementation includes:
   - Handles API errors gracefully with user-friendly messages
   - Includes validation for required parameters
 
-## Recent Improvements
+## Demo and Testing
 
-### Enhanced MCP Protocol Compliance
-- Proper handling of request_id in all responses
-- Validation of incoming requests against MCP protocol specifications
-- Consistent error response format following MCP guidelines
+The repository includes demo files to help you test and explore functionality:
 
-### Improved Setup Experience
-- Interactive setup wizard with API key validation
-- Secure storage of configuration
-- Detailed error messages for troubleshooting
+### Demo Files
 
-### Robust Error Handling
-- Specific error messages for different API error conditions
-- Consistent error format across all tools and prompts
-- Transport-aware logging that doesn't interfere with the protocol
+- **demo/test-connection.html**: Test basic connection to the server
+- **demo/mcp-demo.html**: Comprehensive UI for all features
+- **demo/video-features.html**: Specialized interface for video functionality
+- **demo/enhanced-transcript-features.html**: Advanced transcript features
+
+### Running Tests
+
+```bash
+# Run the full test suite
+npm test
+
+# Run automated inspector tests
+npm run test-inspector
+
+# Test without a real API key (mock mode)
+npm run test-mock
+```
+
+### Testing with MCP Inspector
+
+```bash
+# Test with stdio transport (default)
+./scripts/inspector.sh
+
+# Test with SSE transport
+./scripts/inspector.sh -t sse -p 3001
+
+# Enable debug mode
+./scripts/inspector.sh -d
+```
 
 ## Integration
 
 ### Claude Desktop
 
-Add to your Claude Desktop config (`~/.config/Claude/claude_desktop_config.json` on Linux, `~/Library/Application Support/Claude/claude_desktop_config.json` on Mac):
+Add to your Claude Desktop config:
+- **Linux**: `~/.config/Claude/claude_desktop_config.json`
+- **Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 ```json
 {
@@ -268,18 +345,16 @@ Add to `.cursor/mcp.json` in your project:
 }
 ```
 
-## Deployment (Hosted SSE Server)
+## Deployment
 
 ### Smithery
 
-[![Smithery Badge](https://smithery.ai/badge/readwise-mcp)](https://smithery.ai/server/readwise-mcp)
-
 Install via Smithery CLI:
 ```bash
-npx @smithery/cli install readwise-mcp --client claude
+npx @smithery/cli install @iamalexander/readwise-mcp --client claude
 ```
 
-Or find it on the [Smithery Registry](https://smithery.ai/server/readwise-mcp).
+Or find it on the [Smithery Registry](https://smithery.ai/server/@IAmAlexander/readwise-mcp).
 
 ### Railway (One-Click Deploy)
 
@@ -289,8 +364,6 @@ Or find it on the [Smithery Registry](https://smithery.ai/server/readwise-mcp).
 2. Connect your GitHub repo
 3. Add environment variable: `READWISE_API_KEY`
 4. Deploy!
-
-Your server will be available at `https://your-app.railway.app`
 
 ### Render
 
@@ -306,6 +379,49 @@ Your server will be available at `https://your-app.railway.app`
 docker build -t readwise-mcp .
 docker run -p 3001:3001 -e READWISE_API_KEY=your_key readwise-mcp
 ```
+
+## Troubleshooting
+
+### Token Issues
+
+If you encounter authentication issues:
+
+1. Verify your Readwise API token is still valid at <https://readwise.io/access_token>
+2. Reset authentication by deleting stored credentials:
+   ```bash
+   rm ~/.readwise-mcp/credentials.json
+   ```
+3. Restart and try connecting again
+
+### Connection Issues
+
+If the server cannot connect:
+
+1. Ensure the server is running (if manually started)
+2. Check that port 3001 is not being used by another application
+3. Restart your AI client (Claude Desktop, Cursor, etc.)
+
+### Rate Limiting
+
+The server includes built-in rate limiting. If you encounter rate limit errors:
+
+1. Wait a few minutes before trying again
+2. Reduce the frequency of requests
+3. Check the rate limit headers in responses
+
+### Video-Specific Issues
+
+1. **Missing transcripts**: Not all videos have transcripts. YouTube videos typically have the best support.
+2. **Transcript quality**: Transcripts are from the video platform and may contain errors.
+3. **Timestamp inconsistencies**: Different platforms use different formats; the API normalizes when possible.
+4. **Playback position not updating**: Ensure both `position` and `duration` parameters are provided.
+
+## Privacy & Security
+
+- Your Readwise API token is stored securely on your local machine
+- Your Readwise data is only accessed when explicitly requested
+- No data is permanently stored on the MCP server
+- Safety confirmations prevent accidental data loss
 
 ## Development
 
@@ -323,6 +439,49 @@ npm run dev:watch
 npm run lint
 ```
 
+### Project Structure
+
+- **src/**: Main source code
+- **test-scripts/**: Test scripts and utilities
+- **examples/**: Example implementations
+- **demo/**: Interactive HTML demos
+- **tests/**: Test suites
+
+## Contributing
+
+Found a bug? Have an idea for a feature? Want to make this MCP server even more awesome? Contributions are welcome and encouraged!
+
+### How to Contribute
+
+1. **Fork this repo** (preferably while sipping your beverage of choice)
+2. **Create your feature branch** (`git checkout -b feature/my-amazing-idea`)
+3. **Write some vibes-optimized code** (RGB comments optional but appreciated)
+4. **Commit your changes** (`git commit -m 'Add mind-blowing feature'`)
+5. **Push to the branch** (`git push origin feature/my-amazing-idea`)
+6. **Open a Pull Request** and wait for the dopamine hit when it gets merged
+
+All contributions, big or small, practical or whimsical, are valued!
+
 ## License
 
-MIT
+MIT License
+
+Copyright (c) 2023 Alexander
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
