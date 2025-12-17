@@ -20,7 +20,6 @@ import readline from 'readline';
  * Main entry point for the Readwise MCP server
  */
 async function main() {
-  // Ensure we catch any top-level errors
   try {
     const argv = yargs(hideBin(process.argv))
       .option('port', {
@@ -29,50 +28,50 @@ async function main() {
         type: 'number',
         default: process.env.PORT ? parseInt(process.env.PORT, 10) : 8081
       })
-    .option('transport', {
-      alias: 't',
-      description: 'Transport type (stdio or sse)',
-      choices: ['stdio', 'sse'] as TransportType[],
-      default: 'stdio' as TransportType
-    })
-    .option('debug', {
-      alias: 'd',
-      description: 'Enable debug logging',
-      type: 'boolean',
-      default: false
-    })
-    .option('api-key', {
-      alias: 'k',
-      description: 'Readwise API key',
-      type: 'string'
-    })
-    .option('setup', {
-      alias: 's',
-      description: 'Run setup wizard',
-      type: 'boolean',
-      default: false
-    })
-    .help()
-    .argv as {
-      port: number;
-      transport: TransportType;
-      debug: boolean;
-      'api-key'?: string;
-      setup: boolean;
-    };
+      .option('transport', {
+        alias: 't',
+        description: 'Transport type (stdio or sse)',
+        choices: ['stdio', 'sse'] as TransportType[],
+        default: 'stdio' as TransportType
+      })
+      .option('debug', {
+        alias: 'd',
+        description: 'Enable debug logging',
+        type: 'boolean',
+        default: false
+      })
+      .option('api-key', {
+        alias: 'k',
+        description: 'Readwise API key',
+        type: 'string'
+      })
+      .option('setup', {
+        alias: 's',
+        description: 'Run setup wizard',
+        type: 'boolean',
+        default: false
+      })
+      .help()
+      .argv as {
+        port: number;
+        transport: TransportType;
+        debug: boolean;
+        'api-key'?: string;
+        setup: boolean;
+      };
 
-  // Create logger
-  const logger = new SafeLogger({
-    level: argv.debug ? LogLevel.DEBUG : LogLevel.INFO,
-    transport: argv.transport === 'sse' ? console.log : console.error,
-    timestamps: true,
-    colors: true,
-  });
+    // Create logger
+    const logger = new SafeLogger({
+      level: argv.debug ? LogLevel.DEBUG : LogLevel.INFO,
+      transport: argv.transport === 'sse' ? console.log : console.error,
+      timestamps: true,
+      colors: true,
+    });
 
-  logger.info('Starting Readwise MCP server');
-  logger.debug('Command line arguments:', argv as any);
+    logger.info('Starting Readwise MCP server');
+    logger.debug('Command line arguments:', argv as any);
 
-  try {
+    try {
     // Run setup wizard if requested
     if (argv.setup) {
       const apiKey = await runSetupWizard();
@@ -153,14 +152,19 @@ async function main() {
       // Log but don't exit - allow server to continue serving health checks
     });
     
+    } catch (error) {
+      logger.error('Failed to start server:', error as any);
+      process.exit(1);
+    }
   } catch (error) {
-    logger.error('Error starting server', error as any);
+    // Top-level error handler - log and exit if we can't even create logger
+    console.error('Fatal error starting server:', error);
     if (error instanceof Error) {
-      logger.error('Error details:', {
+      console.error('Error details:', {
         message: error.message,
         stack: error.stack,
         name: error.name
-      } as any);
+      });
     }
     process.exit(1);
   }

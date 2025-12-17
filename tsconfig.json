@@ -41,6 +41,9 @@
     "test-scripts",
     "src/fixed-server.ts",
     "src/fixed-server-deploy.ts",
-    "src/run-fixed-server.ts"
+    "src/run-fixed-server.ts",
+    "src/lambda.ts",
+    "src/serverless.ts",
+    "src/gcf.ts"
   ]
 }
