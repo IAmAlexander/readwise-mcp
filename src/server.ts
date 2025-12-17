@@ -83,6 +83,7 @@ export class ReadwiseMCPServer {
   private logger: Logger;
   private transportType: TransportType;
   private startTime: number;
+  private isReady: boolean = false;
 
   /**
    * Create a new Readwise MCP server
@@ -357,6 +358,8 @@ export class ReadwiseMCPServer {
         }
         // SSE routes are already set up in constructor via setupSSERoutes()
         
+        // Mark server as ready
+        this.isReady = true;
         this.logger.info('✓ Server initialization complete - ready to accept connections');
         resolve();
       });
@@ -409,10 +412,12 @@ export class ReadwiseMCPServer {
     });
     
     // Health check endpoint - must be accessible without authentication
+    // This is critical for Smithery deployment - must respond immediately
     this.app.get('/health', (_req: Request, res: Response) => {
       try {
         const health = {
-          status: 'ok',
+          status: this.isReady ? 'ok' : 'starting',
+          ready: this.isReady,
           uptime: process.uptime(),
           transport: this.transportType,
           tools: this.toolRegistry.getNames().length,
@@ -420,12 +425,15 @@ export class ReadwiseMCPServer {
           timestamp: new Date().toISOString(),
           port: this.port
         };
-        this.logger.debug('Health check requested', health);
-        res.json(health);
+        // Always return 200, but indicate readiness status
+        const statusCode = this.isReady ? 200 : 503;
+        this.logger.debug('Health check requested', { ...health, statusCode });
+        res.status(statusCode).json(health);
       } catch (error) {
         this.logger.error('Error in health check:', error);
         res.status(500).json({
           status: 'error',
+          ready: false,
           message: error instanceof Error ? error.message : 'Unknown error'
         });
       }
@@ -482,8 +490,24 @@ export class ReadwiseMCPServer {
       try {
         this.logger.debug('MCP Streamable HTTP request received', {
           method: req.method,
-          headers: req.headers
+          path: req.path,
+          headers: Object.keys(req.headers)
         });
+        
+        // Ensure MCP server is initialized
+        if (!this.mcpServer) {
+          this.logger.error('MCP server not initialized');
+          res.status(503).json({
+            error: {
+              type: 'transport',
+              details: {
+                code: 'server_not_ready',
+                message: 'MCP server is not initialized yet'
+              }
+            }
+          });
+          return;
+        }
         
         const sessionId = req.headers['mcp-session-id'] as string | undefined;
         let transport: StreamableHTTPServerTransport;
@@ -498,6 +522,7 @@ export class ReadwiseMCPServer {
           this.logger.debug(`Reusing transport for session: ${sessionId}`);
         } else {
           // Create a new transport for a new session
+          this.logger.debug('Creating new Streamable HTTP transport');
           const { randomUUID } = await import('crypto');
           transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => randomUUID()
@@ -505,22 +530,31 @@ export class ReadwiseMCPServer {
           
           // Connect transport to MCP server
           // SDK handles all JSON-RPC messages including initialize and list_tools
+          this.logger.debug('Connecting transport to MCP server');
           await this.mcpServer.connect(transport);
+          this.logger.debug('Transport connected successfully');
           
           // Store transport by session ID after connection
           const newSessionId = (transport as any).sessionId;
           if (newSessionId) {
             streamableTransports.set(newSessionId, transport);
             this.logger.info(`Created new Streamable HTTP transport (session: ${newSessionId})`);
+            // Set session ID header for client
+            res.setHeader('mcp-session-id', newSessionId);
           } else {
             this.logger.warn('Streamable HTTP transport created but sessionId not available');
           }
         }
 
         // Handle the request through the transport
+        this.logger.debug('Handling request through transport');
         await transport.handleRequest(req, res, req.body);
+        this.logger.debug('Request handled successfully');
       } catch (error) {
         this.logger.error('Error handling MCP Streamable HTTP request:', error as any);
+        if (error instanceof Error) {
+          this.logger.error('Error stack:', error.stack);
+        }
         if (!res.headersSent) {
           res.status(500).json({
             error: {

@@ -1,0 +1,87 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-supabase"
+      ],
+      "env": {
+        "SUPABASE_URL": "",
+        "SUPABASE_SERVICE_ROLE_KEY": ""
+      }
+    },
+    "v0": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@v0/mcp-server-v0"
+      ],
+      "env": {
+        "V0_API_KEY": ""
+      }
+    },
+    "posthog": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-posthog"
+      ],
+      "env": {
+        "POSTHOG_API_KEY": "",
+        "POSTHOG_HOST": "https://app.posthog.com"
+      }
+    },
+    "vercel": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-vercel"
+      ],
+      "env": {
+        "VERCEL_API_TOKEN": ""
+      }
+    },
+    "notion": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-notion"
+      ],
+      "env": {
+        "NOTION_API_KEY": ""
+      }
+    },
+    "graphiti": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-graphiti"
+      ],
+      "env": {
+        "GRAPHITI_API_KEY": "",
+        "GRAPHITI_URL": "http://localhost:8765"
+      }
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@context7/mcp-server"
+      ],
+      "env": {
+        "CONTEXT7_API_KEY": ""
+      }
+    },
+    "agno": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@agno/mcp-server"
+      ],
+      "env": {
+        "AGNO_API_KEY": ""
+      }
+    }
+  }
+}

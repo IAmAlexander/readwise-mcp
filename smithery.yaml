@@ -28,8 +28,8 @@ startCommand:
       args: ['dist/index.js', '--transport', 'sse', '--api-key', config.readwiseApiKey || ''],
       env: {
         READWISE_API_KEY: config.readwiseApiKey || '',
-        DEBUG: config.debug ? 'true' : 'false',
-        PORT: process.env.PORT || '8081'
+        DEBUG: config.debug ? 'true' : 'false'
+        // PORT is set automatically by Smithery - don't override it
       }
     })
   exampleConfig:

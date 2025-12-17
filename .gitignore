@@ -13,6 +13,16 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.backup
+*.env.backup
+
+# 1Password related files
+# Note: Documentation files (1PASSWORD_*.md) and utility scripts are kept in repo
+# Only ignore temporary/cache files and backups
+~/.1password/
+.1password/
+*1password*.cache
+*1password*.tmp
 
 # Logs
 logs
@@ -80,3 +90,5 @@ Project Guide/
 
 # Get help
 ./test-readwise-mcp.sh --help
+agent-skills/
+agent-skills/
