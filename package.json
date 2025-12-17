@@ -1,6 +1,6 @@
 {
   "name": "readwise-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Readwise integration for Model Context Protocol - Access your highlights, books, and documents through MCP",
   "mcpName": "io.github.IAmAlexander/readwise-mcp",
   "type": "module",
