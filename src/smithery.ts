@@ -86,8 +86,20 @@ export const stateless = true;
  * This is the default export that Smithery will call
  */
 export default function ({ config }: { config: z.infer<typeof configSchema> }) {
+  // #region agent log
+  fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:88',message:'Default export function called',data:{configReceived:!!config,configKeys:config?Object.keys(config):[],hasApiKey:!!config?.readwiseApiKey,debug:config?.debug},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,D'})}).catch(()=>{});
+  // #endregion
+  console.error('[SMITHERY-DEBUG] Default export function called', { 
+    hasConfig: !!config, 
+    configKeys: config ? Object.keys(config) : [],
+    timestamp: new Date().toISOString()
+  });
   try {
     const apiKey = config.readwiseApiKey || '';
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:92',message:'Config parsed successfully',data:{apiKeyLength:apiKey.length,debug:config.debug},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     
     if (config.debug) {
       console.log('Starting Readwise MCP Server in debug mode');
@@ -95,17 +107,29 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
 
     // Create API client (allow empty API key for lazy loading)
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:98',message:'Creating API client',data:{apiKeyProvided:!!apiKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     const apiClient = new ReadwiseClient({
       apiKey: apiKey || '',
     });
     
     const api = new ReadwiseAPI(apiClient);
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:102',message:'API client created',data:{apiClientCreated:!!apiClient,apiCreated:!!api},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
 
     // Create MCP server
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:105',message:'Creating MCP server',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
+    // #endregion
     const server = new McpServer({
       name: "readwise-mcp",
       version: "1.0.0",
     });
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:108',message:'MCP server created',data:{serverCreated:!!server,hasServerProperty:!!server.server,serverType:typeof server.server},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
 
     // Register all tools
     const tools = [
@@ -149,10 +173,17 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
 
     // Register each tool with the server using server.tool() method
     // This is the recommended way to register tools with McpServer
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:152',message:'Starting tool registration',data:{toolCount:tools.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     for (const tool of tools) {
       // Use empty object {} - validation happens in tool.execute()
       // The SDK will accept any parameters and pass them to our handler
-      server.tool(
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:155',message:'Registering tool',data:{toolName:tool.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      try {
+        server.tool(
         tool.name,
         tool.description,
         {}, // Parameters schema - empty object accepts any params, validation in execute()
@@ -200,7 +231,19 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
           }
         }
       );
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:202',message:'Tool registered successfully',data:{toolName:tool.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      } catch (toolError) {
+        // #region agent log
+        fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:205',message:'Tool registration failed',data:{toolName:tool.name,error:toolError instanceof Error?toolError.message:String(toolError)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        throw toolError;
+      }
     }
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:211',message:'All tools registered',data:{toolCount:tools.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
 
     // Register prompts using server.prompt() method
     const highlightPrompt = new ReadwiseHighlightPrompt(api, consoleLogger);
@@ -270,12 +313,39 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
 
     // Return the server object (Smithery handles transport)
-    return server.server;
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:273',message:'About to return server.server',data:{hasServer:!!server,hasServerProperty:!!server.server,serverServerType:typeof server.server,serverServerKeys:server.server?Object.keys(server.server).slice(0,5):[]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    const serverToReturn = server.server;
+    console.error('[SMITHERY-DEBUG] Returning server.server', {
+      hasServer: !!server,
+      hasServerProperty: !!server.server,
+      serverType: typeof serverToReturn,
+      isNull: serverToReturn === null,
+      isUndefined: serverToReturn === undefined,
+      timestamp: new Date().toISOString()
+    });
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:276',message:'Returning server.server',data:{serverToReturnType:typeof serverToReturn,serverToReturnIsNull:serverToReturn===null,serverToReturnIsUndefined:serverToReturn===undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    return serverToReturn;
     
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:280',message:'Error caught in default export',data:{errorMessage:error instanceof Error?error.message:String(error),errorName:error instanceof Error?error.name:'unknown',hasStack:error instanceof Error?!!error.stack:false,errorType:typeof error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    console.error('[SMITHERY-DEBUG] Server initialization error:', {
+      message: error instanceof Error ? error.message : String(error),
+      name: error instanceof Error ? error.name : 'unknown',
+      stack: error instanceof Error ? error.stack?.substring(0, 1000) : undefined,
+      timestamp: new Date().toISOString()
+    });
     console.error(`Server initialization error: ${error instanceof Error ? error.message : String(error)}`);
     if (error instanceof Error && error.stack) {
       console.error(error.stack);
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/b268e285-8037-4c21-862d-a3266952b6d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'smithery.ts:283',message:'Error stack trace',data:{stackTrace:error.stack?.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
     }
     throw error;
   }
