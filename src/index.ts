@@ -104,8 +104,13 @@ async function main() {
     );
 
     logger.info('Starting server...');
-    await server.start();
-    logger.info('Server started successfully');
+    try {
+      await server.start();
+      logger.info('Server started successfully');
+    } catch (error) {
+      logger.error('Failed to start server:', error as any);
+      process.exit(1);
+    }
     
     // Handle shutdown gracefully
     const shutdown = async () => {
@@ -117,15 +122,16 @@ async function main() {
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);
     
-    // Handle unhandled errors
+    // Handle unhandled errors - log but don't exit immediately to allow health checks
     process.on('uncaughtException', (error) => {
       logger.error('Uncaught exception', error);
-      shutdown();
+      // Don't exit immediately - allow health checks to still work
+      // shutdown();
     });
     
-    process.on('unhandledRejection', (reason) => {
-      logger.error('Unhandled promise rejection', reason as any);
-      shutdown();
+    process.on('unhandledRejection', (reason, promise) => {
+      logger.error('Unhandled promise rejection', { reason, promise } as any);
+      // Log but don't exit - allow server to continue serving health checks
     });
     
   } catch (error) {
