@@ -100,27 +100,33 @@ function toContentItem<T>(value: T): MCPContentItem {
     // Convert object or array to JSON string
     // Use try-catch to handle circular references or other serialization issues
     try {
+      const serialized = JSON.stringify(value, null, 2);
+      // JSON.stringify returns undefined for certain values, ensure we always have a string
       return {
         type: 'text',
-        text: JSON.stringify(value, null, 2)
+        text: serialized ?? '[Unserializable object]'
       };
     } catch (error) {
       // Fallback for objects that can't be stringified (circular refs, etc.)
+      const errorMessage = error instanceof Error ? error.message : 'Unable to serialize object';
       return {
         type: 'text',
-        text: `[Serialization Error: ${error instanceof Error ? error.message : 'Unable to serialize object'}]`
+        text: `[Serialization Error: ${errorMessage}]`
       };
     }
   }
 
   // Handle symbols, bigint, functions, etc.
-  // These are rare but shouldn't cause [object Object]
+  // JSON.stringify returns undefined for symbols and functions, throws for bigint
   try {
+    const serialized = JSON.stringify(value);
+    // Ensure we always return a string - JSON.stringify returns undefined for symbols/functions
     return {
       type: 'text',
-      text: JSON.stringify(value)
+      text: serialized ?? `[${typeof value}]`
     };
   } catch {
+    // BigInt and other non-serializable types end up here
     return {
       type: 'text',
       text: `[${typeof value}]`
