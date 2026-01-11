@@ -51,11 +51,11 @@ function isContentItem(value: any): value is MCPContentItem {
 
 /**
  * Convert a value to an array of MCPContentItems
+ * Always returns a single content item with JSON-stringified result for consistency
  */
 function toContentItems<T>(value: T): MCPContentItem[] {
-  if (Array.isArray(value)) {
-    return value.map(item => toContentItem(item));
-  }
+  // Always serialize the entire value as a single JSON string
+  // This ensures consistent behavior for arrays, objects, and primitives
   return [toContentItem(value)];
 }
 
@@ -84,6 +84,7 @@ function toContentItem<T>(value: T): MCPContentItem {
     };
   }
 
+  // Handle objects and arrays - both have typeof === 'object'
   if (typeof value === 'object') {
     if (Buffer.isBuffer(value) || value instanceof Uint8Array) {
       return {
@@ -96,15 +97,33 @@ function toContentItem<T>(value: T): MCPContentItem {
       };
     }
 
-    // Convert object to JSON string
-    return {
-      type: 'text',
-      text: JSON.stringify(value, null, 2)
-    };
+    // Convert object or array to JSON string
+    // Use try-catch to handle circular references or other serialization issues
+    try {
+      return {
+        type: 'text',
+        text: JSON.stringify(value, null, 2)
+      };
+    } catch (error) {
+      // Fallback for objects that can't be stringified (circular refs, etc.)
+      return {
+        type: 'text',
+        text: `[Serialization Error: ${error instanceof Error ? error.message : 'Unable to serialize object'}]`
+      };
+    }
   }
 
-  return {
-    type: 'text',
-    text: String(value)
-  };
+  // Handle symbols, bigint, functions, etc.
+  // These are rare but shouldn't cause [object Object]
+  try {
+    return {
+      type: 'text',
+      text: JSON.stringify(value)
+    };
+  } catch {
+    return {
+      type: 'text',
+      text: `[${typeof value}]`
+    };
+  }
 } 
