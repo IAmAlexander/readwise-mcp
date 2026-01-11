@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { MCPResponse, MCPContentItem } from '../mcp/types.js';
 
 /**
@@ -87,11 +88,13 @@ function toContentItem<T>(value: T): MCPContentItem {
   // Handle objects and arrays - both have typeof === 'object'
   if (typeof value === 'object') {
     if (Buffer.isBuffer(value) || value instanceof Uint8Array) {
+      // Uint8Array.toString() ignores encoding arg, so convert to Buffer first
+      const buf = Buffer.isBuffer(value) ? value : Buffer.from(value);
       return {
         type: 'resource',
         resource: {
           uri: '',
-          blob: value.toString('base64'),
+          blob: buf.toString('base64'),
           mimeType: 'application/octet-stream'
         }
       };
