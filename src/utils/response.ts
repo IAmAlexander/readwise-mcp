@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { MCPResponse, MCPContentItem } from '../mcp/types.js';
 
 /**
@@ -51,11 +52,11 @@ function isContentItem(value: any): value is MCPContentItem {
 
 /**
  * Convert a value to an array of MCPContentItems
+ * Always returns a single content item with JSON-stringified result for consistency
  */
 function toContentItems<T>(value: T): MCPContentItem[] {
-  if (Array.isArray(value)) {
-    return value.map(item => toContentItem(item));
-  }
+  // Always serialize the entire value as a single JSON string
+  // This ensures consistent behavior for arrays, objects, and primitives
   return [toContentItem(value)];
 }
 
@@ -84,27 +85,54 @@ function toContentItem<T>(value: T): MCPContentItem {
     };
   }
 
+  // Handle objects and arrays - both have typeof === 'object'
   if (typeof value === 'object') {
     if (Buffer.isBuffer(value) || value instanceof Uint8Array) {
+      // Uint8Array.toString() ignores encoding arg, so convert to Buffer first
+      const buf = Buffer.isBuffer(value) ? value : Buffer.from(value);
       return {
         type: 'resource',
         resource: {
           uri: '',
-          blob: value.toString('base64'),
+          blob: buf.toString('base64'),
           mimeType: 'application/octet-stream'
         }
       };
     }
 
-    // Convert object to JSON string
-    return {
-      type: 'text',
-      text: JSON.stringify(value, null, 2)
-    };
+    // Convert object or array to JSON string
+    // Use try-catch to handle circular references or other serialization issues
+    try {
+      const serialized = JSON.stringify(value, null, 2);
+      // JSON.stringify returns undefined for certain values, ensure we always have a string
+      return {
+        type: 'text',
+        text: serialized ?? '[Unserializable object]'
+      };
+    } catch (error) {
+      // Fallback for objects that can't be stringified (circular refs, etc.)
+      const errorMessage = error instanceof Error ? error.message : 'Unable to serialize object';
+      return {
+        type: 'text',
+        text: `[Serialization Error: ${errorMessage}]`
+      };
+    }
   }
 
-  return {
-    type: 'text',
-    text: String(value)
-  };
+  // Handle symbols, bigint, functions, etc.
+  // JSON.stringify returns undefined for symbols and functions, throws for bigint
+  try {
+    const serialized = JSON.stringify(value);
+    // Ensure we always return a string - JSON.stringify returns undefined for symbols/functions
+    return {
+      type: 'text',
+      text: serialized ?? `[${typeof value}]`
+    };
+  } catch {
+    // BigInt and other non-serializable types end up here
+    return {
+      type: 'text',
+      text: `[${typeof value}]`
+    };
+  }
 } 
