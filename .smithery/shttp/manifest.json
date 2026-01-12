@@ -1401,7 +1401,7 @@
     ]
   },
   "source": {
-    "commit": "8304bdd096024b171bc329ba1a37ad8893ec4d80",
-    "branch": "claude/address-pr-review-feedback-t8r52"
+    "commit": "341df3a4ff0c272e3c43157cad8012346b5b85f4",
+    "branch": "claude/fix-smithery-build-aQrdl"
   }
 }

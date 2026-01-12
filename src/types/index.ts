@@ -149,12 +149,24 @@ export interface ClientConfig {
    * Readwise API token
    */
   apiKey: string;
-  
+
   /**
    * Optional base URL for the Readwise API
    * @default 'https://readwise.io/api/v2'
    */
   baseUrl?: string;
+}
+
+/**
+ * HTTP client interface for Readwise API
+ * Both axios-based ReadwiseClient and fetch-based FetchClient implement this interface
+ */
+export interface HttpClient {
+  get<T>(url: string, config?: unknown): Promise<T>;
+  post<T>(url: string, data?: unknown, config?: unknown): Promise<T>;
+  put<T>(url: string, data?: unknown, config?: unknown): Promise<T>;
+  patch<T>(url: string, data?: unknown, config?: unknown): Promise<T>;
+  delete<T>(url: string, config?: unknown): Promise<T>;
 }
 
 // Error types

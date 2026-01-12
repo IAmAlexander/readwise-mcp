@@ -14,7 +14,9 @@ import { z } from "zod";
 import type { z as zod } from "zod";
 
 // Import API client and tools
-import { ReadwiseClient } from './api/client.js';
+// Use FetchClient instead of ReadwiseClient for Cloudflare Workers compatibility
+// (axios and its dependencies require Node.js built-ins that don't work in Workers)
+import { FetchClient } from './api/fetch-client.js';
 import { ReadwiseAPI } from './api/readwise-api.js';
 
 // Import all tools
@@ -318,7 +320,8 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
     }
 
     // Create API client (allow empty API key for lazy loading)
-    const apiClient = new ReadwiseClient({
+    // Use FetchClient for Cloudflare Workers compatibility
+    const apiClient = new FetchClient({
       apiKey: apiKey || '',
     });
     

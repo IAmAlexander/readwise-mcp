@@ -1,5 +1,5 @@
-import { ReadwiseClient } from './client.js';
 import {
+  HttpClient,
   GetHighlightsParams,
   GetBooksParams,
   SearchParams,
@@ -56,9 +56,10 @@ import { CONFIRMATIONS } from '../constants.js';
 export class ReadwiseAPI {
   /**
    * Create a new ReadwiseAPI
-   * @param client - The ReadwiseClient instance to use
+   * @param client - An HTTP client implementing the HttpClient interface
+   *                 (either ReadwiseClient for Node.js or FetchClient for Cloudflare Workers)
    */
-  constructor(private client: ReadwiseClient) {}
+  constructor(private client: HttpClient) {}
   
   /**
    * Get highlights from Readwise
