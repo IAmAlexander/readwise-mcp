@@ -200,7 +200,7 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
+          "readOnlyHint": false,
           "destructiveHint": false,
           "idempotentHint": true
         },
@@ -246,7 +246,7 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
+          "readOnlyHint": false,
           "destructiveHint": false,
           "idempotentHint": true
         },
@@ -324,7 +324,7 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
+          "readOnlyHint": false,
           "destructiveHint": false,
           "idempotentHint": true
         },
@@ -418,9 +418,9 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
+          "readOnlyHint": false,
           "destructiveHint": false,
-          "idempotentHint": true
+          "idempotentHint": false
         },
         "execution": {
           "taskSupport": "forbidden"
@@ -471,7 +471,7 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
+          "readOnlyHint": false,
           "destructiveHint": false,
           "idempotentHint": true
         },
@@ -502,8 +502,8 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
-          "destructiveHint": false,
+          "readOnlyHint": false,
+          "destructiveHint": true,
           "idempotentHint": true
         },
         "execution": {
@@ -533,9 +533,9 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
+          "readOnlyHint": false,
           "destructiveHint": false,
-          "idempotentHint": true
+          "idempotentHint": false
         },
         "execution": {
           "taskSupport": "forbidden"
@@ -826,9 +826,9 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
+          "readOnlyHint": false,
           "destructiveHint": false,
-          "idempotentHint": true
+          "idempotentHint": false
         },
         "execution": {
           "taskSupport": "forbidden"
@@ -888,7 +888,7 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
+          "readOnlyHint": false,
           "destructiveHint": false,
           "idempotentHint": true
         },
@@ -989,9 +989,9 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
+          "readOnlyHint": false,
           "destructiveHint": false,
-          "idempotentHint": true
+          "idempotentHint": false
         },
         "execution": {
           "taskSupport": "forbidden"
@@ -1056,7 +1056,7 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
+          "readOnlyHint": false,
           "destructiveHint": false,
           "idempotentHint": true
         },
@@ -1087,8 +1087,8 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
-          "destructiveHint": false,
+          "readOnlyHint": false,
+          "destructiveHint": true,
           "idempotentHint": true
         },
         "execution": {
@@ -1200,9 +1200,9 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
+          "readOnlyHint": false,
           "destructiveHint": false,
-          "idempotentHint": true
+          "idempotentHint": false
         },
         "execution": {
           "taskSupport": "forbidden"
@@ -1277,7 +1277,7 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
+          "readOnlyHint": false,
           "destructiveHint": false,
           "idempotentHint": true
         },
@@ -1311,8 +1311,8 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "annotations": {
-          "readOnlyHint": true,
-          "destructiveHint": false,
+          "readOnlyHint": false,
+          "destructiveHint": true,
           "idempotentHint": true
         },
         "execution": {
@@ -1401,7 +1401,7 @@
     ]
   },
   "source": {
-    "commit": "16f0827c9d85ab661a5c5dd33d8687d5e58ab0ce",
+    "commit": "8304bdd096024b171bc329ba1a37ad8893ec4d80",
     "branch": "claude/address-pr-review-feedback-t8r52"
   }
 }
