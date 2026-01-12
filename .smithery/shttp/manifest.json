@@ -1,0 +1,1407 @@
+{
+  "type": "hosted",
+  "stateful": false,
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "readwiseApiKey": {
+        "type": "string",
+        "description": "Your Readwise API access token. Get it from https://readwise.io/access_token"
+      },
+      "debug": {
+        "type": "boolean",
+        "default": false,
+        "description": "Enable verbose debug logging to troubleshoot issues"
+      }
+    },
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  },
+  "serverCard": {
+    "serverInfo": {
+      "name": "readwise-mcp",
+      "title": "Readwise",
+      "version": "1.0.0"
+    },
+    "tools": [
+      {
+        "name": "get_highlights",
+        "description": "Retrieve highlights from your Readwise library",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "book_id": {
+              "type": "string",
+              "description": "Filter highlights by book ID"
+            },
+            "page": {
+              "type": "number",
+              "description": "Page number for pagination"
+            },
+            "page_size": {
+              "type": "number",
+              "description": "Number of results per page (1-100)"
+            },
+            "search": {
+              "type": "string",
+              "description": "Search term to filter highlights"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "get_books",
+        "description": "Get a list of books from Readwise",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "number",
+              "description": "Page number to retrieve"
+            },
+            "page_size": {
+              "type": "number",
+              "description": "Number of items per page (max 100)"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "get_documents",
+        "description": "Retrieve documents from your Readwise library",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "number",
+              "description": "Page number for pagination"
+            },
+            "page_size": {
+              "type": "number",
+              "description": "Number of results per page"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "search_highlights",
+        "description": "Search for highlights in your Readwise library",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "The search query to find highlights"
+            },
+            "limit": {
+              "type": "number",
+              "description": "Maximum number of results to return"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "get_tags",
+        "description": "Get a list of all tags from Readwise",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "document_tags",
+        "description": "Get, update, add, or remove tags for a document in Readwise",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "The ID of the document"
+            },
+            "operation": {
+              "type": "string",
+              "enum": [
+                "get",
+                "update",
+                "add",
+                "remove"
+              ],
+              "description": "The operation to perform"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Tags to set (for update operation)"
+            },
+            "tag": {
+              "type": "string",
+              "description": "Tag to add/remove (for add/remove operations)"
+            }
+          },
+          "required": [
+            "document_id",
+            "operation"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "bulk_tags",
+        "description": "Add tags to multiple documents in Readwise",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "IDs of the documents to tag"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Tags to add to all specified documents"
+            },
+            "replace_existing": {
+              "type": "boolean",
+              "description": "Replace existing tags (true) or append (false)"
+            },
+            "confirmation": {
+              "type": "string",
+              "description": "Must be \"I confirm these tag changes\" to proceed"
+            }
+          },
+          "required": [
+            "document_ids",
+            "tags",
+            "confirmation"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "get_reading_progress",
+        "description": "Get the reading progress of a document from your Readwise library",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "The ID of the document to get reading progress for"
+            }
+          },
+          "required": [
+            "document_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "update_reading_progress",
+        "description": "Update the reading progress of a document in your Readwise library",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "The ID of the document to update"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "not_started",
+                "in_progress",
+                "completed"
+              ],
+              "description": "Reading status"
+            },
+            "percentage": {
+              "type": "number",
+              "description": "Reading progress percentage (0-100)"
+            },
+            "current_page": {
+              "type": "number",
+              "description": "Current page number"
+            },
+            "total_pages": {
+              "type": "number",
+              "description": "Total number of pages"
+            },
+            "last_read_at": {
+              "type": "string",
+              "description": "Timestamp of when last read (ISO format)"
+            }
+          },
+          "required": [
+            "document_id",
+            "status"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "get_reading_list",
+        "description": "Get a list of documents with their reading progress from your Readwise library",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "not_started",
+                "in_progress",
+                "completed"
+              ],
+              "description": "Filter by reading status"
+            },
+            "category": {
+              "type": "string",
+              "description": "Filter by document category"
+            },
+            "page": {
+              "type": "number",
+              "description": "Page number for pagination"
+            },
+            "page_size": {
+              "type": "number",
+              "description": "Number of results per page"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "create_highlight",
+        "description": "Create a new highlight in your Readwise library",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "description": "The text to highlight"
+            },
+            "book_id": {
+              "type": "string",
+              "description": "The ID of the book to create the highlight in"
+            },
+            "note": {
+              "type": "string",
+              "description": "Note to add to the highlight"
+            },
+            "location": {
+              "type": "number",
+              "description": "Location in the book (e.g. page number)"
+            },
+            "location_type": {
+              "type": "string",
+              "description": "Type of location (e.g. page, chapter)"
+            },
+            "color": {
+              "type": "string",
+              "description": "Color for the highlight"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Tags to add to the highlight"
+            }
+          },
+          "required": [
+            "text",
+            "book_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "update_highlight",
+        "description": "Update an existing highlight in your Readwise library",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "highlight_id": {
+              "type": "string",
+              "description": "The ID of the highlight to update"
+            },
+            "text": {
+              "type": "string",
+              "description": "New text for the highlight"
+            },
+            "note": {
+              "type": "string",
+              "description": "Note to add to the highlight"
+            },
+            "location": {
+              "type": "number",
+              "description": "Location in the book"
+            },
+            "location_type": {
+              "type": "string",
+              "description": "Type of location"
+            },
+            "color": {
+              "type": "string",
+              "description": "Color for the highlight"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Tags for the highlight"
+            }
+          },
+          "required": [
+            "highlight_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "delete_highlight",
+        "description": "Delete a highlight from your Readwise library",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "highlight_id": {
+              "type": "string",
+              "description": "The ID of the highlight to delete"
+            },
+            "confirmation": {
+              "type": "string",
+              "description": "Type \"DELETE\" to confirm deletion"
+            }
+          },
+          "required": [
+            "highlight_id",
+            "confirmation"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "create_note",
+        "description": "Create a note on a highlight in your Readwise library",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "highlight_id": {
+              "type": "string",
+              "description": "The ID of the highlight to add a note to"
+            },
+            "note": {
+              "type": "string",
+              "description": "The note text to add"
+            }
+          },
+          "required": [
+            "highlight_id",
+            "note"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "advanced_search",
+        "description": "Search highlights with advanced filters and facets",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query"
+            },
+            "book_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of book IDs to filter by"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of tags to filter by"
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of categories to filter by"
+            },
+            "date_range": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "string",
+                  "description": "Start date in ISO format"
+                },
+                "end": {
+                  "type": "string",
+                  "description": "End date in ISO format"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Date range filter"
+            },
+            "location_range": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "number",
+                  "description": "Start location"
+                },
+                "end": {
+                  "type": "number",
+                  "description": "End location"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Location range filter"
+            },
+            "has_note": {
+              "type": "boolean",
+              "description": "Filter highlights that have notes"
+            },
+            "sort_by": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "highlighted_at",
+                "location"
+              ],
+              "description": "Field to sort by"
+            },
+            "sort_order": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "Sort order"
+            },
+            "page": {
+              "type": "number",
+              "description": "Page number for pagination"
+            },
+            "page_size": {
+              "type": "number",
+              "description": "Number of results per page"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "search_by_tag",
+        "description": "Search highlights by tags",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of tags to search for"
+            },
+            "match_all": {
+              "type": "boolean",
+              "description": "Match all tags (AND) or any tag (OR)"
+            },
+            "page": {
+              "type": "number",
+              "description": "Page number for pagination"
+            },
+            "page_size": {
+              "type": "number",
+              "description": "Number of results per page"
+            }
+          },
+          "required": [
+            "tags"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "search_by_date",
+        "description": "Search highlights by date range",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_date": {
+              "type": "string",
+              "description": "Start date in ISO format (e.g. 2024-01-01)"
+            },
+            "end_date": {
+              "type": "string",
+              "description": "End date in ISO format (e.g. 2024-12-31)"
+            },
+            "date_field": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "highlighted_at"
+              ],
+              "description": "Which date field to search on"
+            },
+            "page": {
+              "type": "number",
+              "description": "Page number for pagination"
+            },
+            "page_size": {
+              "type": "number",
+              "description": "Number of results per page"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "get_videos",
+        "description": "Get videos from Readwise library",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "number",
+              "description": "Maximum number of videos to return (1-100)"
+            },
+            "pageCursor": {
+              "type": "string",
+              "description": "Cursor for pagination"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Filter videos by tags"
+            },
+            "platform": {
+              "type": "string",
+              "description": "Filter videos by platform"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "get_video",
+        "description": "Get video details by document ID",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "The Readwise document ID for the video"
+            }
+          },
+          "required": [
+            "document_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "create_video_highlight",
+        "description": "Create a highlight on a video at a specific timestamp",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "The ID of the video"
+            },
+            "text": {
+              "type": "string",
+              "description": "The text of the highlight"
+            },
+            "timestamp": {
+              "type": "string",
+              "description": "Timestamp where the highlight occurs (e.g. 14:35)"
+            },
+            "note": {
+              "type": "string",
+              "description": "Note about the highlight"
+            }
+          },
+          "required": [
+            "document_id",
+            "text",
+            "timestamp"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "get_video_highlights",
+        "description": "Get all highlights from a specific video",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "The ID of the video"
+            }
+          },
+          "required": [
+            "document_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "update_video_position",
+        "description": "Update the playback position of a video",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "The ID of the video"
+            },
+            "position": {
+              "type": "number",
+              "description": "Current playback position in seconds"
+            },
+            "duration": {
+              "type": "number",
+              "description": "Total duration of the video in seconds"
+            }
+          },
+          "required": [
+            "document_id",
+            "position",
+            "duration"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "get_video_position",
+        "description": "Get the current playback position of a video",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "The ID of the video"
+            }
+          },
+          "required": [
+            "document_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "save_document",
+        "description": "Save a new document (URL, article, or webpage) to your Readwise library",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "The URL of the content to save"
+            },
+            "title": {
+              "type": "string",
+              "description": "Title override for the document"
+            },
+            "author": {
+              "type": "string",
+              "description": "Author override for the document"
+            },
+            "html": {
+              "type": "string",
+              "description": "HTML content if not scraping from URL"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Tags to apply to the saved content"
+            },
+            "summary": {
+              "type": "string",
+              "description": "Summary of the content"
+            },
+            "notes": {
+              "type": "string",
+              "description": "Notes about the content"
+            },
+            "location": {
+              "type": "string",
+              "enum": [
+                "new",
+                "later",
+                "archive",
+                "feed"
+              ],
+              "description": "Where to save the content"
+            },
+            "category": {
+              "type": "string",
+              "description": "Category for the document (e.g. article, email)"
+            },
+            "published_date": {
+              "type": "string",
+              "description": "Published date in ISO 8601 format"
+            },
+            "image_url": {
+              "type": "string",
+              "description": "Cover image URL"
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "update_document",
+        "description": "Update metadata for an existing document in your Readwise library",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "The ID of the document to update"
+            },
+            "title": {
+              "type": "string",
+              "description": "New title for the document"
+            },
+            "author": {
+              "type": "string",
+              "description": "New author for the document"
+            },
+            "summary": {
+              "type": "string",
+              "description": "New summary for the document"
+            },
+            "published_date": {
+              "type": "string",
+              "description": "New published date in ISO 8601 format"
+            },
+            "image_url": {
+              "type": "string",
+              "description": "New cover image URL"
+            },
+            "location": {
+              "type": "string",
+              "enum": [
+                "new",
+                "later",
+                "archive",
+                "feed"
+              ],
+              "description": "New location"
+            },
+            "category": {
+              "type": "string",
+              "description": "New category"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "New tags for the document"
+            }
+          },
+          "required": [
+            "document_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "delete_document",
+        "description": "Delete a document from your Readwise library (requires confirmation)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "description": "The ID of the document to delete"
+            },
+            "confirmation": {
+              "type": "string",
+              "description": "Type \"I confirm deletion\" to confirm"
+            }
+          },
+          "required": [
+            "document_id",
+            "confirmation"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "get_recent_content",
+        "description": "Get the most recently added or updated content from your Readwise library",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "number",
+              "description": "Number of recent items to retrieve (default: 10, max: 50)"
+            },
+            "content_type": {
+              "type": "string",
+              "enum": [
+                "books",
+                "highlights",
+                "all"
+              ],
+              "description": "Type of content to retrieve (default: all)"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "bulk_save_documents",
+        "description": "Save multiple documents (URLs, articles, or webpages) to your Readwise library in bulk (requires confirmation)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "The URL of the content to save"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Title override"
+                  },
+                  "author": {
+                    "type": "string",
+                    "description": "Author override"
+                  },
+                  "html": {
+                    "type": "string",
+                    "description": "HTML content"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Tags"
+                  },
+                  "summary": {
+                    "type": "string",
+                    "description": "Summary"
+                  },
+                  "notes": {
+                    "type": "string",
+                    "description": "Notes"
+                  },
+                  "location": {
+                    "type": "string",
+                    "enum": [
+                      "new",
+                      "later",
+                      "archive",
+                      "feed"
+                    ],
+                    "description": "Location"
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Array of documents to save"
+            },
+            "confirmation": {
+              "type": "string",
+              "description": "Type \"I confirm saving these items\" to confirm"
+            }
+          },
+          "required": [
+            "items",
+            "confirmation"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "bulk_update_documents",
+        "description": "Update metadata for multiple documents in your Readwise library in bulk (requires confirmation)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "updates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "document_id": {
+                    "type": "string",
+                    "description": "The ID of the document to update"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "New title"
+                  },
+                  "author": {
+                    "type": "string",
+                    "description": "New author"
+                  },
+                  "summary": {
+                    "type": "string",
+                    "description": "New summary"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "New tags"
+                  },
+                  "location": {
+                    "type": "string",
+                    "enum": [
+                      "new",
+                      "later",
+                      "archive",
+                      "feed"
+                    ],
+                    "description": "New location"
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "New category"
+                  }
+                },
+                "required": [
+                  "document_id"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Array of document updates"
+            },
+            "confirmation": {
+              "type": "string",
+              "description": "Type \"I confirm these updates\" to confirm"
+            }
+          },
+          "required": [
+            "updates",
+            "confirmation"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      },
+      {
+        "name": "bulk_delete_documents",
+        "description": "Delete multiple documents from your Readwise library in bulk (requires confirmation)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Array of document IDs to delete"
+            },
+            "confirmation": {
+              "type": "string",
+              "description": "Type \"I confirm deletion of these documents\" to confirm"
+            }
+          },
+          "required": [
+            "document_ids",
+            "confirmation"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        }
+      }
+    ],
+    "resources": [
+      {
+        "name": "books",
+        "uri": "readwise://books",
+        "description": "List of books in your Readwise library",
+        "mimeType": "application/json"
+      },
+      {
+        "name": "recent-highlights",
+        "uri": "readwise://highlights/recent",
+        "description": "Recent highlights from your Readwise library",
+        "mimeType": "application/json"
+      },
+      {
+        "name": "tags",
+        "uri": "readwise://tags",
+        "description": "List of all tags in your Readwise library",
+        "mimeType": "application/json"
+      }
+    ],
+    "prompts": [
+      {
+        "name": "readwise_highlight",
+        "description": "Retrieves and analyzes highlights from Readwise",
+        "arguments": [
+          {
+            "name": "book_id",
+            "description": "The ID of the book to get highlights from",
+            "required": false
+          },
+          {
+            "name": "page",
+            "description": "The page number of results to get",
+            "required": false
+          },
+          {
+            "name": "page_size",
+            "description": "The number of results per page (max 100)",
+            "required": false
+          },
+          {
+            "name": "search",
+            "description": "Search term to filter highlights",
+            "required": false
+          },
+          {
+            "name": "context",
+            "description": "Additional context to include in the prompt",
+            "required": false
+          },
+          {
+            "name": "task",
+            "description": "The task to perform with the highlights",
+            "required": false
+          }
+        ]
+      },
+      {
+        "name": "readwise_search",
+        "description": "Searches and analyzes highlights from Readwise",
+        "arguments": [
+          {
+            "name": "query",
+            "description": "Search query to find highlights",
+            "required": true
+          },
+          {
+            "name": "limit",
+            "description": "Maximum number of results to return",
+            "required": false
+          },
+          {
+            "name": "context",
+            "description": "Additional context to include in the prompt",
+            "required": false
+          }
+        ]
+      }
+    ]
+  },
+  "source": {
+    "commit": "16f0827c9d85ab661a5c5dd33d8687d5e58ab0ce",
+    "branch": "claude/address-pr-review-feedback-t8r52"
+  }
+}
