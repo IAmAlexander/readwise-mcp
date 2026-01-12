@@ -62,7 +62,8 @@ export class FetchClient {
   constructor(config: ExtendedClientConfig) {
     // Allow empty API key for lazy loading (authentication will be checked on first request)
     this.apiKey = config.apiKey || '';
-    this.baseURL = config.baseUrl || 'https://readwise.io/api/v2';
+    // Use base URL without version - endpoints include /v2/ or /v3/ as needed
+    this.baseURL = config.baseUrl || 'https://readwise.io/api';
 
     // Set up rate limiting (default: enabled with 60 requests/minute)
     const enableRateLimiting = config.enableRateLimiting !== false;

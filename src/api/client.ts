@@ -56,7 +56,8 @@ export class ReadwiseClient {
     }
 
     this.client = axios.create({
-      baseURL: config.baseUrl || 'https://readwise.io/api/v2',
+      // Use base URL without version - endpoints include /v2/ or /v3/ as needed
+      baseURL: config.baseUrl || 'https://readwise.io/api',
       headers
     });
     
