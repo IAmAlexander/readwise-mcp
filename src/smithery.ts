@@ -371,18 +371,45 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
       new BulkDeleteDocumentsTool(api, consoleLogger),
     ];
 
+    // Tool annotations based on operation type
+    const getToolAnnotations = (toolName: string) => {
+      // Delete operations - destructive but idempotent (deleting twice = same result)
+      const deleteTools = ['delete_highlight', 'delete_document', 'bulk_delete_documents'];
+      if (deleteTools.includes(toolName)) {
+        return { readOnlyHint: false, destructiveHint: true, idempotentHint: true };
+      }
+
+      // Create operations - not idempotent (creating twice = two resources)
+      const createTools = [
+        'create_highlight', 'create_note', 'create_video_highlight',
+        'save_document', 'bulk_save_documents'
+      ];
+      if (createTools.includes(toolName)) {
+        return { readOnlyHint: false, destructiveHint: false, idempotentHint: false };
+      }
+
+      // Update operations - idempotent (updating twice with same data = same result)
+      const updateTools = [
+        'update_highlight', 'update_reading_progress', 'update_video_position',
+        'update_document', 'bulk_update_documents', 'document_tags', 'bulk_tags'
+      ];
+      if (updateTools.includes(toolName)) {
+        return { readOnlyHint: false, destructiveHint: false, idempotentHint: true };
+      }
+
+      // Default: read-only operations
+      return { readOnlyHint: true, destructiveHint: false, idempotentHint: true };
+    };
+
     // Register each tool with the server using server.tool() method
     for (const tool of tools) {
       try {
+        const annotations = getToolAnnotations(tool.name);
         server.tool(
         tool.name,
         tool.description,
         toolSchemas[tool.name] || {}, // Use Zod schemas for parameter descriptions
-        {
-          readOnlyHint: true, // Most Readwise operations are read-only
-          destructiveHint: false,
-          idempotentHint: true
-        },
+        annotations,
         async (args: any) => {
           try {
             const toolResult = await tool.execute(args || {});
