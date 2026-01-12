@@ -138,7 +138,7 @@ async function main() {
     
     // Set up the appropriate transport
     if (transportType === 'stdio') {
-      setupStdioTransport(server);
+      await setupStdioTransport(server);
     } else {
       setupSSETransport(server, app);
     }
@@ -153,21 +153,15 @@ async function main() {
 /**
  * Set up stdio transport
  */
-function setupStdioTransport(server) {
+async function setupStdioTransport(server) {
   console.error("Setting up stdio transport...");
-  
+
   try {
     const transport = new StdioServerTransport();
-    
-    server.connect(transport)
-      .then(() => {
-        console.error("Stdio transport connected successfully");
-      })
-      .catch(error => {
-        console.error("Error connecting stdio transport:", error);
-      });
+    await server.connect(transport);
+    console.error("Stdio transport connected successfully");
   } catch (error) {
-    console.error("Error setting up stdio transport:", error);
+    console.error("Error connecting stdio transport:", error);
     throw error;
   }
 }
@@ -177,54 +171,76 @@ function setupStdioTransport(server) {
  */
 function setupSSETransport(server, app) {
   console.error("Setting up SSE transport...");
-  
+
+  // Track active SSE connection to prevent race conditions
+  let activeConnection = null;
+
   // Set up SSE endpoint
-  app.get('/sse', (req, res) => {
-    console.error("New SSE connection");
-    
+  app.get('/sse', async (req, res) => {
+    console.error("New SSE connection request");
+
+    // Check if there's already an active connection
+    if (activeConnection !== null) {
+      console.error("Rejecting connection: another client is already connected");
+      res.status(409).json({
+        error: 'Conflict',
+        message: 'Another SSE client is already connected. This server supports single-client testing only.'
+      });
+      return;
+    }
+
+    // Mark connection as active immediately to prevent race conditions
+    const connectionId = Date.now();
+    activeConnection = connectionId;
+
     // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.flushHeaders();
-    
+
     try {
       // Create transport
       const transport = new SSEServerTransport('/messages', res);
-      
+
       // Connect transport to server
-      server.connect(transport)
-        .then(() => {
-          console.error("SSE transport connected successfully");
-          
-          // Keep-alive interval
-          const keepAliveInterval = setInterval(() => {
-            if (!res.writableEnded) {
-              res.write('event: ping\ndata: {}\n\n');
-            } else {
-              clearInterval(keepAliveInterval);
-            }
-          }, 30000);
-          
-          // Handle client disconnect
-          req.on('close', () => {
-            console.error("Client disconnected");
-            clearInterval(keepAliveInterval);
-            transport.close().catch(err => {
-              console.error("Error closing transport:", err);
-            });
-          });
-        })
-        .catch(error => {
-          console.error("Error connecting SSE transport:", error);
-          if (!res.writableEnded) {
-            res.write(`event: error\ndata: ${JSON.stringify({ error: 'Internal server error' })}\n\n`);
-            res.end();
-          }
-        });
+      await server.connect(transport);
+      console.error("SSE transport connected successfully");
+
+      // Keep-alive interval
+      const keepAliveInterval = setInterval(() => {
+        if (!res.writableEnded) {
+          res.write('event: ping\ndata: {}\n\n');
+        } else {
+          clearInterval(keepAliveInterval);
+        }
+      }, 30000);
+
+      // Handle client disconnect
+      req.on('close', async () => {
+        console.error("Client disconnected");
+        clearInterval(keepAliveInterval);
+
+        // Clear active connection
+        if (activeConnection === connectionId) {
+          activeConnection = null;
+        }
+
+        try {
+          await transport.close();
+        } catch (err) {
+          console.error("Error closing transport:", err);
+        }
+      });
     } catch (error) {
       console.error("Error in SSE endpoint:", error);
+
+      // Clear active connection on error
+      if (activeConnection === connectionId) {
+        activeConnection = null;
+      }
+
       if (!res.writableEnded) {
         res.write(`event: error\ndata: ${JSON.stringify({ error: 'Internal server error' })}\n\n`);
         res.end();
@@ -235,18 +251,30 @@ function setupSSETransport(server, app) {
   // Set up messages endpoint for SSE
   app.post('/messages', (req, res) => {
     console.error("Received POST message");
-    
+
     // Handle the message through SSE transport
     try {
       // Find active transport
       const transport = server._transport;
-      
-      if (!transport || !transport.handlePostMessage) {
-        console.error("No active SSE transport");
-        res.status(500).json({ error: 'No active SSE transport' });
+
+      if (!transport) {
+        console.error("No SSE connection established");
+        res.status(503).json({
+          error: 'Service Unavailable',
+          message: 'No SSE connection established. Please connect to /sse first.'
+        });
         return;
       }
-      
+
+      if (!transport.handlePostMessage) {
+        console.error("SSE connection lost or invalid");
+        res.status(503).json({
+          error: 'Service Unavailable',
+          message: 'SSE connection lost or invalid. Please reconnect to /sse.'
+        });
+        return;
+      }
+
       // Pass message to transport
       transport.handlePostMessage(req, res);
     } catch (error) {
