@@ -1,0 +1,84 @@
+name: Claude Release Notes
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to generate notes for'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release-notes:
+    name: Generate Release Notes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for commit analysis
+
+      - name: Generate Release Notes
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          timeout_minutes: 10
+          prompt: |
+            REPO: ${{ github.repository }}
+            TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+            Generate comprehensive release notes for this release.
+
+            1. **Get commits since last release**:
+               ```bash
+               # Find previous tag
+               PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+               if [ -n "$PREV_TAG" ]; then
+                 git log $PREV_TAG..HEAD --oneline
+               else
+                 git log --oneline -50
+               fi
+               ```
+
+            2. **Categorize changes**:
+               - **Features**: New functionality (feat:, feature:, add:)
+               - **Bug Fixes**: Fixes (fix:, bugfix:)
+               - **Performance**: Improvements (perf:)
+               - **Security**: Security fixes (security:)
+               - **Breaking Changes**: API changes, migrations needed
+               - **Documentation**: Docs updates (docs:)
+               - **Other**: Refactoring, chores, etc.
+
+            3. **Format release notes**:
+               ```markdown
+               ## What's New
+
+               ### Features
+               - Feature description (#PR)
+
+               ### Bug Fixes
+               - Fix description (#PR)
+
+               ### Breaking Changes
+               - Change and migration path
+
+               ### Other
+               - Other changes
+
+               **Full Changelog**: previous_tag...current_tag
+               ```
+
+            4. **Update the release**:
+               ```bash
+               gh release edit TAG --notes "NOTES_CONTENT"
+               ```
+
+            Focus on user-facing changes. Group related commits. Be concise but informative.
+          claude_args: '--allowed-tools "Bash(gh release:*),Bash(git log:*),Bash(git describe:*),Bash(git tag:*),Read,Glob,Grep"'
