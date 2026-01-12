@@ -1,0 +1,57 @@
+name: Claude Stale Issue Handler
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9 AM UTC
+  workflow_dispatch:  # Manual trigger
+
+permissions:
+  contents: read
+  issues: write
+  id-token: write
+
+jobs:
+  stale-issues:
+    name: Handle Stale Issues
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Process Stale Issues
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          timeout_minutes: 10
+          prompt: |
+            REPO: ${{ github.repository }}
+
+            Review stale issues and take appropriate action.
+
+            1. **Find stale issues** (no activity in 30+ days):
+               ```bash
+               gh issue list --state open --json number,title,updatedAt,labels --limit 50
+               ```
+
+            2. **For each stale issue**, evaluate:
+               - Is it still relevant?
+               - Does it need more information?
+               - Has it been resolved by other changes?
+               - Should it be closed as stale?
+
+            3. **Take action**:
+               - **Needs info**: Add `needs-info` label and comment asking for updates
+               - **Likely resolved**: Comment asking if still relevant, add `stale` label
+               - **Close**: If marked stale for 14+ days with no response, close with comment
+
+            4. **Example commands**:
+               - Add label: `gh issue edit NUMBER --add-label "stale"`
+               - Comment: `gh issue comment NUMBER --body "message"`
+               - Close: `gh issue close NUMBER --comment "Closing as stale"`
+
+            Be respectful in comments. Don't close issues that are clearly still problems.
+            Limit to processing 10 issues maximum per run.
+          claude_args: '--allowed-tools "Bash(gh issue:*),Read,Glob,Grep"'
