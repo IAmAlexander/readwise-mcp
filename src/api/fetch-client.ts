@@ -22,15 +22,26 @@ export interface ExtendedClientConfig extends ClientConfig {
 }
 
 /**
- * Error structure matching the axios-based client
+ * Custom error class for API errors
+ * Extends Error so it can be properly caught and serialized
  */
-interface ClientError {
+export class APIClientError extends Error {
   type: 'authentication' | 'api' | 'transport';
-  details: {
-    status?: number;
-    code: string;
-    message: string;
-  };
+  status?: number;
+  code: string;
+
+  constructor(
+    type: 'authentication' | 'api' | 'transport',
+    message: string,
+    code: string,
+    status?: number
+  ) {
+    super(message);
+    this.name = 'APIClientError';
+    this.type = type;
+    this.code = code;
+    this.status = status;
+  }
 }
 
 /**
@@ -82,7 +93,7 @@ export class FetchClient {
   }
 
   /**
-   * Handle response errors and convert to ClientError format
+   * Handle response errors and throw APIClientError
    */
   private async handleError(response: Response): Promise<never> {
     const status = response.status;
@@ -91,27 +102,22 @@ export class FetchClient {
     let errorMessage: string;
     try {
       const errorData = await response.json();
-      errorMessage = errorData?.detail || response.statusText;
+      errorMessage = errorData?.detail || errorData?.message || response.statusText;
     } catch {
       errorMessage = response.statusText;
     }
 
-    const error: ClientError = {
-      type: isAuthError ? 'authentication' : 'api',
-      details: {
-        status,
-        code: status === 429
-          ? 'rate_limit_exceeded'
-          : isAuthError
-            ? 'authentication_required'
-            : 'api_error',
-        message: isAuthError && !this.apiKey
-          ? 'Readwise API key is required. Please provide your API key from https://readwise.io/access_token'
-          : errorMessage
-      }
-    };
+    const type = isAuthError ? 'authentication' : 'api';
+    const code = status === 429
+      ? 'rate_limit_exceeded'
+      : isAuthError
+        ? 'authentication_required'
+        : 'api_error';
+    const message = isAuthError && !this.apiKey
+      ? 'Readwise API key is required. Please provide your API key from https://readwise.io/access_token'
+      : `API Error (${status}): ${errorMessage}`;
 
-    throw error;
+    throw new APIClientError(type, message, code, status);
   }
 
   /**

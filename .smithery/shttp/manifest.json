@@ -1401,7 +1401,7 @@
     ]
   },
   "source": {
-    "commit": "341df3a4ff0c272e3c43157cad8012346b5b85f4",
+    "commit": "da7cec86a02167234e5af75a5bae0e707de01cb8",
     "branch": "claude/fix-smithery-build-aQrdl"
   }
 }

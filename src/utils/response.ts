@@ -1,5 +1,25 @@
-import { Buffer } from 'node:buffer';
 import { MCPResponse, MCPContentItem } from '../mcp/types.js';
+
+/**
+ * Convert Uint8Array to base64 string
+ * Works in both Node.js and Cloudflare Workers
+ */
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  // In modern environments, use built-in btoa with binary string conversion
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+/**
+ * Check if a value is a Buffer-like object (Node.js Buffer or Uint8Array)
+ */
+function isBufferLike(value: unknown): value is Uint8Array {
+  return value instanceof Uint8Array ||
+    (typeof Buffer !== 'undefined' && Buffer.isBuffer(value));
+}
 
 /**
  * Convert any value to an MCPResponse.
@@ -104,14 +124,13 @@ function toContentItem<T>(value: T): MCPContentItem {
 
   // Handle objects and arrays - both have typeof === 'object'
   if (typeof value === 'object') {
-    if (Buffer.isBuffer(value) || value instanceof Uint8Array) {
-      // Uint8Array.toString() ignores encoding arg, so convert to Buffer first
-      const buf = Buffer.isBuffer(value) ? value : Buffer.from(value);
+    // Handle binary data (Buffer or Uint8Array)
+    if (isBufferLike(value)) {
       return {
         type: 'resource',
         resource: {
           uri: '',
-          blob: buf.toString('base64'),
+          blob: uint8ArrayToBase64(value),
           mimeType: 'application/octet-stream'
         }
       };

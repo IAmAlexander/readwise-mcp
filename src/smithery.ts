@@ -442,11 +442,30 @@ export default function ({ config }: { config: z.infer<typeof configSchema> }) {
             if (config.debug) {
               console.error(`Error executing tool ${tool.name}:`, error);
             }
-            // Return error in MCP format
+            // Return error in MCP format with proper serialization
+            let errorMessage: string;
+            if (error instanceof Error) {
+              errorMessage = error.message;
+            } else if (typeof error === 'object' && error !== null) {
+              // Handle plain object errors (e.g., from older code paths)
+              const errObj = error as Record<string, unknown>;
+              if ('message' in errObj && typeof errObj.message === 'string') {
+                errorMessage = errObj.message;
+              } else if ('details' in errObj && typeof errObj.details === 'object') {
+                const details = errObj.details as Record<string, unknown>;
+                errorMessage = typeof details.message === 'string'
+                  ? details.message
+                  : JSON.stringify(error);
+              } else {
+                errorMessage = JSON.stringify(error);
+              }
+            } else {
+              errorMessage = String(error);
+            }
             return {
               content: [{
                 type: 'text' as const,
-                text: error instanceof Error ? error.message : String(error)
+                text: errorMessage
               }]
             };
           }
