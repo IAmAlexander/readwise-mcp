@@ -1,0 +1,71 @@
+name: Claude Security Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+    paths:
+      - '**/*.py'
+      - '**/*.ts'
+      - '**/*.tsx'
+      - '**/*.js'
+      - '**/*.jsx'
+      - '**/api/**'
+      - '**/auth/**'
+      - '**/middleware/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  security-review:
+    name: Claude Security Audit
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Run Claude Security Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          timeout_minutes: 10
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Conduct a HIGH-CONFIDENCE security audit on this pull request.
+            ONLY report vulnerabilities with >80% exploitation confidence.
+
+            ## Check For
+
+            1. **Input Validation** - SQL/NoSQL injection, command injection, path traversal, XXE, template injection
+            2. **Auth/Authz** - Missing auth checks, IDOR, session flaws, privilege escalation
+            3. **Cryptographic** - Hardcoded secrets/API keys, weak hashing, missing encryption
+            4. **Code Execution** - eval() with user input, unsafe deserialization
+            5. **Data Exposure** - XSS, sensitive data in responses, stack traces to clients
+
+            ## DO NOT Report
+            - DoS vulnerabilities
+            - Rate limiting issues
+            - Test file vulnerabilities
+            - Theoretical attacks without clear exploitation path
+
+            ## Output Format
+            For each finding:
+            - **Severity**: CRITICAL / HIGH / MEDIUM
+            - **File & Line**: Exact location
+            - **Confidence**: X% (only if >=80%)
+            - **Vulnerability Type**: Category
+            - **Exploitation Scenario**: How to exploit
+            - **Remediation**: Specific fix
+
+            If no high-confidence vulnerabilities: "No high-confidence security vulnerabilities detected."
+
+            Post findings using `gh pr comment --number ${{ github.event.pull_request.number }}`.
+          claude_args: '--allowed-tools "Bash(gh pr:*),Read,Glob,Grep"'
