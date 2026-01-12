@@ -296,18 +296,32 @@ export class ReadwiseMCPServer {
       // Set up request handler for tools/call
       this.mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
         const { name, arguments: args } = request.params;
-        
+
         this.logger.debug(`SDK tool call received: ${name}`, { args });
-        
+
         // Get the tool from our registry
         const tool = this.toolRegistry.get(name);
         if (!tool) {
           throw new Error(`Tool not found: ${name}`);
         }
-        
+
         // Execute the tool using our existing implementation
-        const result = await tool.execute(args || {});
-        return result;
+        const toolResult = await tool.execute(args || {});
+
+        // Extract the actual result from MCPToolResult wrapper
+        // Tools return { result: <data> } format, we need to extract and serialize
+        const actualResult = toolResult && typeof toolResult === 'object' && 'result' in toolResult
+          ? (toolResult as any).result
+          : toolResult;
+
+        // Convert to MCP content format with proper JSON serialization
+        // This prevents [object Object] serialization issues
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify(actualResult, null, 2)
+          }]
+        };
       });
       
       this.logger.info(`Set up SDK request handlers for ${this.toolRegistry.getNames().length} tools`);
