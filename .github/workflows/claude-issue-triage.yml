@@ -1,0 +1,63 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+  id-token: write
+
+jobs:
+  triage:
+    name: Claude Issue Triage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Triage Issue
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          timeout_minutes: 5
+          prompt: |
+            REPO: ${{ github.repository }}
+            ISSUE NUMBER: ${{ github.event.issue.number }}
+            ISSUE TITLE: ${{ github.event.issue.title }}
+
+            Analyze this newly opened issue and perform triage:
+
+            1. **Read the issue** using `gh issue view ${{ github.event.issue.number }}`
+
+            2. **Determine labels** based on content:
+               - `bug` - Something isn't working
+               - `feature` - New functionality request
+               - `enhancement` - Improvement to existing feature
+               - `documentation` - Docs improvements
+               - `question` - User needs help
+               - `good first issue` - Simple fix, good for newcomers
+
+            3. **Determine area** (add one):
+               - `area:backend` - Python/API changes
+               - `area:frontend` - Web UI, PWA, Extension
+               - `area:agents` - Agent system, PaL
+               - `area:memory` - Memory providers, Hindsight
+               - `area:infra` - CI/CD, deployment, docker
+
+            4. **Determine priority** (add one if clear):
+               - `priority:high` - Blocking issue, security, data loss
+               - `priority:medium` - Important but not urgent
+               - `priority:low` - Nice to have
+
+            5. **Apply labels** using: `gh issue edit ${{ github.event.issue.number }} --add-label "label1,label2"`
+
+            6. **Add a brief comment** acknowledging the issue and any clarifying questions needed.
+               Use: `gh issue comment ${{ github.event.issue.number }} --body "message"`
+
+            Do NOT assign the issue to anyone. Just label and comment.
+          claude_args: '--allowed-tools "Bash(gh issue:*),Read,Glob,Grep"'
