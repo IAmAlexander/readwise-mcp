@@ -2,9 +2,13 @@ import { Buffer } from 'node:buffer';
 import { MCPResponse, MCPContentItem } from '../mcp/types.js';
 
 /**
- * Convert any value to an MCPResponse
+ * Convert any value to an MCPResponse.
+ * - null/undefined returns empty content array
+ * - Pre-built MCPResponse objects are returned as-is
+ * - All other values are converted to MCPContentItem(s)
  */
 export function toMCPResponse<T>(result: T): MCPResponse {
+  // null/undefined returns empty content (not JSON "null")
   if (result === null || result === undefined) {
     return {
       content: [],
@@ -51,19 +55,31 @@ function isContentItem(value: any): value is MCPContentItem {
 }
 
 /**
- * Convert a value to an array of MCPContentItems
- * Always returns a single content item with JSON-stringified result for consistency
+ * Convert a value to an array of MCPContentItems.
+ * - Pre-built MCPContentItem arrays are preserved as-is
+ * - All other values are wrapped in a single content item
  */
 function toContentItems<T>(value: T): MCPContentItem[] {
-  // Always serialize the entire value as a single JSON string
-  // This ensures consistent behavior for arrays, objects, and primitives
+  // Preserve already-built content items (e.g., multi-part image/resource responses)
+  if (Array.isArray(value) && value.every(isContentItem)) {
+    return value;
+  }
+
+  // Otherwise serialize the entire value as a single item for consistent behavior
   return [toContentItem(value)];
 }
 
 /**
- * Convert a single value to an MCPContentItem
+ * Convert a single value to an MCPContentItem.
+ * - null/undefined → empty string (not JSON "null")
+ * - strings → returned raw (not JSON-quoted)
+ * - numbers/booleans → String() conversion
+ * - Buffer/Uint8Array → base64-encoded resource
+ * - objects/arrays → JSON.stringify with pretty printing
+ * - other types → type indicator string
  */
 function toContentItem<T>(value: T): MCPContentItem {
+  // null/undefined returns empty text, not JSON "null"
   if (value === null || value === undefined) {
     return {
       type: 'text',
@@ -71,6 +87,7 @@ function toContentItem<T>(value: T): MCPContentItem {
     };
   }
 
+  // Strings are returned raw, not JSON-quoted
   if (typeof value === 'string') {
     return {
       type: 'text',
