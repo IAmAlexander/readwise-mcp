@@ -1,0 +1,55 @@
+name: Claude PR Description
+
+on:
+  pull_request:
+    types: [opened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  pr-description:
+    name: Generate PR Description
+    runs-on: ubuntu-latest
+    # Only run if PR body is empty or minimal
+    if: github.event.pull_request.body == '' || github.event.pull_request.body == null
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate PR Description
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          timeout_minutes: 5
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            PR TITLE: ${{ github.event.pull_request.title }}
+            BRANCH: ${{ github.event.pull_request.head.ref }}
+
+            This PR was opened without a description. Generate one based on the changes.
+
+            1. **Get the diff**:
+               ```bash
+               gh pr diff ${{ github.event.pull_request.number }}
+               ```
+
+            2. **Analyze changes** and create a description with:
+               - **Summary**: What this PR does (1-2 sentences)
+               - **Changes**: Bullet points of key changes
+               - **Testing**: How to test (if applicable)
+               - **Related Issues**: Link any related issues (if branch name contains issue number)
+
+            3. **Update the PR description**:
+               ```bash
+               gh pr edit ${{ github.event.pull_request.number }} --body "DESCRIPTION"
+               ```
+
+            Keep it concise. Focus on the "what" and "why", not the "how".
+          claude_args: '--allowed-tools "Bash(gh pr:*),Read,Glob,Grep"'
